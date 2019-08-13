@@ -151,10 +151,10 @@ class MainWindow (QMainWindow):
         self.ui.fluloadCB.activated.connect(self.loadFlu)
 
         # set element table
-        self.ui.flusubTW.horizontalHeader().setVisible(True)
-        self.ui.flusubTW.verticalHeader().setVisible(True)
-        self.ui.flusubTW.setHorizontalHeaderLabels(
-            QStringList() << 'Element' << 'Composition' << 'Ionic Radius' + ' (' + u'\u212b' + ')')
+        # self.ui.flusubTW.horizontalHeader().setVisible(True)
+        # self.ui.flusubTW.verticalHeader().setVisible(True)
+        # self.ui.flusubTW.setHorizontalHeaderLabels(
+        #     QStringList() << 'Element' << 'Composition' << 'Ionic Radius' + ' (' + u'\u212b' + ')')
 
         # unresolved
         self.connect(self.ui.insflusubPB, SIGNAL('clicked()'), self.insFluIon)
@@ -680,10 +680,11 @@ class MainWindow (QMainWindow):
                                             other_params),
                                       kws = {'shscan':False,
                                               'beam_profile':self.beam})
-
-        print lm.fit_report(self.flu_result)
-
         self.params = self.flu_result.params
+
+        tb = self.ui.fluparaTB
+        tb.clear()
+        tb.append(lm.fit_report(self.flu_result))
 
         self.updateGUI()  # it has to be before updateFluCal()
         self.updateFluCal() # self.updateGUI() has to be excucated before it reads parameters from GUI
