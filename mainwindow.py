@@ -67,7 +67,7 @@ class MainWindow (QMainWindow):
         self.eleradius = pdtb.constants.electron_radius*1e10
         self.avoganum = pdtb.constants.avogadro_number
         self.boltzmann = 1.38065e-23
-        mpl.rc('axes',color_cycle = ['b','r','g','c','m','y','k'])
+        mpl.rc('axes',color_cycle = ['b','g','c','m','y','k'])
         self.errorlist = np.array([[1, 1.074], [2, 1.204], [3, 1.222],
                                 [4, 1.220], [5, 1.213], [6, 1.205], 
                                 [7, 1.198], [8, 1.191], [9, 1.184], 
@@ -96,6 +96,7 @@ class MainWindow (QMainWindow):
         self.ui.rmflufitfilePB.clicked.connect(self.removeFluFitFile)
 
         self.ui.fluqcCB.stateChanged.connect(self.updateFluPlot)
+        self.ui.flulineCB.stateChanged.connect(self.updateFluPlot)
         self.ui.flulegendCB.stateChanged.connect(self.updateFluPlot)
         self.ui.flulegendlocCoB.currentIndexChanged.connect(self.updateFluPlot)
         self.ui.flulogyCB.stateChanged.connect(self.updateFluPlot)
@@ -114,7 +115,7 @@ class MainWindow (QMainWindow):
              ('mu_bot_emt',self.ui.flumubotemtLE),
              ('rho_top', self.ui.flurhotopLE),
              ('rho_bot', self.ui.flurhobotLE),
-             ('slit', self.ui.fluslitLE),
+             ('width', self.ui.fluwidthLE),
              ('det_len',self.ui.fludetLE)]
         )
 
@@ -133,8 +134,8 @@ class MainWindow (QMainWindow):
              ('bg',   [self.ui.flubgLE, self.ui.flubgCB]),
              ('qoff', [self.ui.fluqoffLE, self.ui.fluqoffCB]),
              ('curv', [self.ui.flucurvLE, self.ui.flucurvCB]),
-             ('lamd', [self.ui.flulamdLE, self.ui.flulamdCB]),
-             ('epsl', [self.ui.fluepslLE, self.ui.fluepslCB])]
+             ('loff', [self.ui.fluloffLE, self.ui.fluloffCB]),
+             ('soff', [self.ui.flusoffLE, self.ui.flusoffCB])]
         )
 
         for p,u in self.ui_params.iteritems():
@@ -164,7 +165,7 @@ class MainWindow (QMainWindow):
 
         # set text for fitting parameters
         for p, u in self.ui_params.iteritems():
-            if p in ['curv', 'lamd']:
+            if p in ['curv', 'loff']:
                 u[0].setText(format(self.params[p].value, '.4f'))
             else:
                 u[0].setText(format(self.params[p].value, '.2e'))
@@ -227,7 +228,7 @@ class MainWindow (QMainWindow):
         mu_bot_emit = float(flupara_sys[5] / 1e8)  # abs. coef. of bot phase for emission, in 1/A
         rho_top = flupara_sys[6]  # electron density of top pahse, in A^-3
         rho_bot = flupara_sys[7]  # electron density of top pahse, in A^-3
-        slit = flupara_sys[8] * 1e7  # size of slit1, in A
+        width = flupara_sys[8] * 1e7  # width or FWHM of the beam, in A
         detlen = flupara_sys[9] * 1e7  # detector length, in A
 
         # calculate abosrption parameters.
@@ -290,7 +291,7 @@ class MainWindow (QMainWindow):
                              [bet_top_inc, bet_top_emit, bet_bot_inc, bet_bot_emit],
                              [del_top_inc, del_top_emit, del_bot_inc, del_bot_emit],
                              flupara_ele,
-                             slit,
+                             width,
                              detlen]
 
     def fluCalFun(self, flupara, flupara_sys, refpara, qz_, shscan=False, beam_profile='Uniform'):
@@ -306,8 +307,8 @@ class MainWindow (QMainWindow):
         conupbk = flupara['upbk'].value  # background linear is borrowed for upper phase concentration, in M
         surden = flupara['surd'].value  # surface density, in A^-2
         conbulk = flupara['lobk'].value  # bulk concentration, in M
-        _epsilon = flupara['epsl'].value
-        _lambda = flupara['lamd'].value
+        sh_offset = flupara['soff'].value
+        l2_offset = flupara['loff'].value
 
         # unwrap system parameters
         k0 = flupara_sys[1][0]
@@ -315,7 +316,7 @@ class MainWindow (QMainWindow):
         bet = flupara_sys[4]
         del_ = flupara_sys[5]
         fluelepara = flupara_sys[6]
-        slit = flupara_sys[7]  # size of slit1, in A
+        width = flupara_sys[7]  # width or FWHM of the beam, in A
         detlen = flupara_sys[8]  # detector length, in A
         mu_top_inc, mu_top_emit, mu_bot_inc, mu_bot_emit = tuple(mu)
         bet_top_inc, bet_top_emit, bet_bot_inc, bet_bot_emit = tuple(bet)
@@ -332,18 +333,18 @@ class MainWindow (QMainWindow):
         steps = 500
         if beam_profile == 'Uniform':
             weight = np.ones(steps + 1)
-            fprint = slit / np.sin(alpha)  # beamsize is slit for a uniform profile.
+            fprint = width / np.sin(alpha)
         elif beam_profile == 'Gaussian':
-            stdev = slit / 2.355  # slit size is the FWHM of the beam, i.e. 2.355 sigma
+            stdev = width / 2.355  # FWHM of the beam, i.e. 2.355 sigma
             beamsize = 2 * (3 * stdev)  # keep the beam up to +/-3 standard deviation, or 99.73% of intensity.
             rays = np.linspace(-beamsize / 2, beamsize / 2, steps + 1)  # devide the beam into 500 rays
-            weight = stat.norm(0, stdev).pdf(rays) * slit  # weight normalized to the total intensity
+            weight = stat.norm(0, stdev).pdf(rays) * width  # weight normalized to the total intensity
             fprint = beamsize / np.sin(alpha)  # get the footprints in unit of /AA
         else:
             print "Error: please choose the right beam profile: uniform/gaussian"
 
         # deviation of sh is Qz dependent.
-        det_sh = _lambda * (qz - 0.006) + _epsilon
+        det_sh = l2_offset/(2*k0) * (qz - 0.006) + sh_offset
         center = - det_sh * 1.0e7 / alpha
         # initialize fluorescence data, rows: total, aqueous, organic, interface
         absorb = lambda x: np.nan_to_num(np.exp(x))
@@ -500,8 +501,8 @@ class MainWindow (QMainWindow):
 
     def removeFluFile(self): #remove flu files in the listwidget and deselect all flu files in the listwidget
 
-        for item in self.ui.flufileLW.selectedItems():
-            self.flufiles.pop(self.ui.flufileLW.row(item))
+        to_del = [self.ui.flufileLW.row(item) for item in self.ui.flufileLW.selectedItems()]
+        self.flufiles = [f for i,f in enumerate(self.flufiles) if i not in to_del]
 
         self.ui.flufileLW.clear()
         self.updateFluFile()
@@ -538,8 +539,9 @@ class MainWindow (QMainWindow):
         self.updateFluPlot()
 
     def removeFluFitFile(self):  #remove flu fit files in the listwidget and deselect all flu fit files in the listwidget
-        for item in self.ui.flufitfileLW.selectedItems():
-            self.flufitfiles.pop(self.ui.flufitfileLW.row(item))
+
+        to_del = [self.ui.flufitfileLW.row(item) for item in self.ui.flufitfileLW.selectedItems()]
+        self.flufitfiles = [f for i, f in enumerate(self.flufitfiles) if i not in to_del]
 
         self.ui.flufitfileLW.clear()
         self.updateFluFitFile()
@@ -552,10 +554,15 @@ class MainWindow (QMainWindow):
         ax1.set_ylabel('Intensity [a.u.]')
         ax1.set_xlim([0.004,0.017])
 
+        if self.ui.flulineCB.isChecked():
+            ls = '-'
+        else:
+            ls = ''
+
         if len(self.fludata) != 0: #plot flu files
             for i,d in enumerate(self.fludata):
                 ax1.errorbar(d[:,0],d[:,1],yerr=d[:,2],
-                             marker='o', ls='',
+                             marker='o', ls=ls,
                              label='#'+str(i+1))
 
         if len(self.flufitdata) != 0: #plot flu fit files
@@ -773,7 +780,7 @@ class MainWindow (QMainWindow):
     def saveFluFitDig(self):
 
         Dialog=QDialog(self)
-        self.uiflusavefit = uic.loadUi('refsave.ui', Dialog)
+        self.uiflusavefit = uic.loadUi(resource_path('GUI/refsave.ui'), Dialog)
         self.uiflusavefit.label.setText('Save Fluorescence Fit/Calcualtion!')
         try:
             self.uiflusavefit.xminLE.setText(str(self.simu_range[0]))
