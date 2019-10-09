@@ -1,27 +1,30 @@
 import sys
 
-# import PyQt4 QtCore and QtGui modules
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import pyqtRemoveInputHook
+from PyQt5.QtWidgets import QApplication
 
-from mainwindow import MainWindow
 
-if __name__ == '__main__':
+from mainwindow3 import MainWindow
 
+def main():
     # create application
     pyqtRemoveInputHook()
     app = QApplication(sys.argv)
     app.setApplicationName('15ID-C XFNTR Analyzer')
-    
 
     # create widget
     w = MainWindow()
     w.setWindowTitle('15ID-C XFNTR Analyzer')
-    #w.setWindowIcon(QIcon('logo.png'))
+    # w.setWindowIcon(QIcon('logo.png'))
     w.show()
 
     # connection
-    QObject.connect(app, SIGNAL('lastWindowClosed()'), app, SLOT('quit()'))
+    app.lastWindowClosed.connect(app.quit)
 
     # execute application
     sys.exit(app.exec_())
+
+if __name__ == '__main__':
+
+    main()
+

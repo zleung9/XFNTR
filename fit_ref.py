@@ -27,14 +27,11 @@ def sldCalFun(d,rho,sigma,x):
 
     return sld_tot
 
-def refCalFun(d,rho,mu,sigma,syspara,x,rrf=True):
+def refCalFun(d,rho,mu,sigma,x,rrf=False):
 
     if sigma[0] <= 0: sigma[0] = 1e-5 # eliminate zero
     sigma = sigma[0] * np.ones(len(sigma)) # fixed sigma
 
-    qoff = syspara[0]
-    yscale = syspara[1]
-    qres = syspara[2]
     erad = e_radius
     slab=0.25
     k0=2*np.pi*float(energy)/12.3984 # wave vector
@@ -44,8 +41,7 @@ def refCalFun(d,rho,mu,sigma,syspara,x,rrf=True):
     length = np.sum(d) + 4* (sigma[0]+sigma[-1])
     steps=int(length/slab) # each sliced box has thickness of ~ 0.25 A
     xsld=np.linspace(-4*sigma[0],np.sum(d)+4*sigma[-1],steps) # get the z-axis for sld
-  
-   
+
     sd=length/steps # thickness for each slab
     intrho=sldCalFun(d,rho,sigma,xsld) # rho for all the steps
     intmu=sldCalFun(d,mu,sigma,xsld) # mu for all the steps
@@ -66,12 +62,12 @@ def refCalFun(d,rho,mu,sigma,syspara,x,rrf=True):
     fdel=erad*2.0*np.pi/k0/k0
     sdelf=np.array(sdel)/fdel
 
-    ref,refr=xr.parratt(x+qoff,lamda,d,sdelf,sbet)
+    ref,refr=xr.parratt(x,lamda,d,sdelf,sbet)
     frsnll,frsnl1=xr.parratt(x,lamda,[0,1],[sdelf[0],sdelf[-1]],[sbet[0],sbet[-1]]) 
     if rrf == True:
-        return yscale*ref/frsnll
+        return ref/frsnll
     else:
-        return yscale*ref
+        return ref
 
 def ref2min(params,x,y,yerr,fit=True):
 
@@ -107,7 +103,6 @@ def ref2min(params,x,y,yerr,fit=True):
                            rho+[rho_b[i]],
                            mu,
                            [sigma[i]]+sigma_t,
-                           [qoff[i]]+[1,0],
                            x[i])
             residual = np.append(residual, (yy-y[i])/yerr[i])             
         return residual
@@ -118,7 +113,6 @@ def ref2min(params,x,y,yerr,fit=True):
                            rho + [rho_b[i]],
                            mu,
                            [sigma[i]] + sigma_t,
-                           [qoff[i]] + [1, 0],
                            x[i])
             model.append(yy)
         return tuple(model)
@@ -130,12 +124,12 @@ def iterCallBack(params,iteration,resid,x,y,err,fit=True):
     df = n - m # degree of freedom
     redchisq = sum(resid**2) / df
     if (iteration<=10) or (iteration%10==0):  #display reduced chisq every 10 iteration
-        print iteration,redchisq
+        print(iteration,redchisq)
 
 def initParameters(name_list,para_list):
     
     if len(name_list)!=len(para_list):
-        print " Does name_list and value_list match, please check "
+        print(" Does name_list and value_list match, please check ")
         return
     params = Parameters()
     for i,name in enumerate(name_list):
@@ -314,8 +308,8 @@ if __name__ == '__main__':
                    kws={'fit':True})
 
     # for p in params: print params[p]
-    print '\n'
-    print out.redchi
+    print('\n')
+    print(out.redchi)
     report_fit(out)
     ############################################################################
     fit = ref2min(out.params,qz,data,err,fit=False)
