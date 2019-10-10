@@ -4,7 +4,7 @@ from PyQt5.QtCore import pyqtRemoveInputHook
 from PyQt5.QtWidgets import QApplication
 
 
-from mainwindow3 import MainWindow
+from mainwindow import MainWindow
 
 def main():
     # create application
