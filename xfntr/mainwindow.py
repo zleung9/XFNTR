@@ -312,7 +312,7 @@ class MainWindow (QMainWindow):
 
     def setupLimitsUI(self):
 
-        ui = uic.loadUi('GUI/err4.ui', QDialog(self))
+        ui = uic.loadUi(UI_path + 'GUI/err4.ui', QDialog(self))
         ui.cancelPB.clicked.connect(ui.close)
         ui.confirmPB.clicked.connect(self.updateLimits)
         self.ui_par_limits = OrderedDict(
@@ -495,7 +495,7 @@ class MainWindow (QMainWindow):
             row_fit=len(self.selectedflufitfiles_rows)
             row=row_flu+row_fit
             Dialog=QDialog(self)
-            self.uiplotscale=uic.loadUi('plotscale.ui', Dialog)
+            self.uiplotscale=uic.loadUi(UI_path + 'plotscale.ui', Dialog)
             self.uiplotscale.scaleTW.setRowCount(row) #set the table size; 4 column is fixed
             self.uiplotscale.show()
             self.uiplotscale.scaleLabel.setText('Fluorescence Plot Scale Setup: X=X*Factor+Offset')
@@ -748,7 +748,7 @@ class MainWindow (QMainWindow):
                 self.ui_params[name][1].setChecked(False)
             raise
 
-        self.uifluerr1=uic.loadUi(UI_path'err1.ui',QDialog(self))
+        self.uifluerr1=uic.loadUi(UI_path + 'err1.ui',QDialog(self))
         self.uifluerr1.label.setText('Uncertainty Calculation for Parameter:' + self.fluerr_pname[0])
 
         best_value = float(self.ui_params[self.fluerr_pname[0]][0].text())
@@ -788,7 +788,7 @@ class MainWindow (QMainWindow):
         for p, u in self.ui_params.items():  u[1].toggle()
 
         # close the first dialog and open a new dialog
-        self.uifluerr2 = uic.loadUi(UI_path+'err2.ui', QDialog(self))
+        self.uifluerr2 = uic.loadUi(UI_path + 'err2.ui', QDialog(self))
         self.uifluerr2.label.setText('Please check parameters to fit')
         self.uifluerr2.fluErrorProgress.setValue(0)
         # self.fluErroFit = myThread()
@@ -902,7 +902,7 @@ class MainWindow (QMainWindow):
         except:
             right_err_str = "not found"
 
-        self.uifluerr3=uic.loadUi(UI_path+'err3.ui',QDialog(self))
+        self.uifluerr3=uic.loadUi(UI_path + 'err3.ui',QDialog(self))
         self.uifluerr3.label.setText('Plot for Chi-square vs Parameter:'+self.fluerr_pname[0])
         self.uifluerr3.minchiLE.setText(format(min_chisq,'.2f'))
         self.uifluerr3.tarchiLE.setText(format(self.target_chisq,'.2f'))

@@ -1,0 +1,6 @@
+[console_scripts]
+xfntr1 = xfntr.main:main
+
+[gui_scripts]
+xfntr = xfntr.main:main
+
