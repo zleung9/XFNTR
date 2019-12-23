@@ -7,6 +7,8 @@ r_e = pdtb.constants.electron_radius * 1e10  # classical electron radius, in A
 N_A = pdtb.constants.avogadro_number  # Avogadro number, unitless
 k_B = 1.38065e-23  # Boltzman constant, in J/K
 
+absorb =
+
 import numpy as np
 import scipy.stats as stat
 import fit_ref as mfit
@@ -31,17 +33,20 @@ def update_flu_parameters(p, *args):
     flu_par = args[0]
 
     # update the fitting parameter whatsoever
-    p['hisc'] = flu_par['hisc'].value  # scale factor for the top phase, unitless.
-    p['losc'] = flu_par['losc'].value  # scale factor for the bottom phase, unitless.
-    p['bg'] = flu_par['bg'].value  # background intensity, unitless.
-    p['tC'] = flu_par['upbk'].value  # ion concentration of the top phase, in M.
-    p['bC'] = flu_par['lobk'].value  # ion concentration of the bottom phase, in M.
-    p['sC'] = flu_par['surd'].value  # ion surface number density, in A^-2.
-    p['qoff'] = flu_par['qoff'].value  # q off set for the data
-    p['doff'] = flu_par['soff'].value * 1e7  # det range offset for the measurement
-    p['l2off'] = flu_par['loff'].value * 1e7  # l2 offset for the measurement
-    p['curv'] = flu_par['curv'].value * 1e10  # the curvature of the interface, in A.
-    if p['curv'] == 0: p['curv'] = 10000 * 1e10
+    try:
+        p['hisc'] = flu_par['hisc'].value  # scale factor for the top phase, unitless.
+        p['losc'] = flu_par['losc'].value  # scale factor for the bottom phase, unitless.
+        p['bg'] = flu_par['bg'].value  # background intensity, unitless.
+        p['tC'] = flu_par['upbk'].value  # ion concentration of the top phase, in M.
+        p['bC'] = flu_par['lobk'].value  # ion concentration of the bottom phase, in M.
+        p['sC'] = flu_par['surd'].value  # ion surface number density, in A^-2.
+        p['qoff'] = flu_par['qoff'].value  # q off set for the data
+        p['soff'] = flu_par['soff'].value * 1e7  # det range offset for the measurement
+        p['l2off'] = flu_par['loff'].value * 1e7  # l2 offset for the measurement
+        p['curv'] = flu_par['curv'].value * 1e10  # the curvature of the interface, in A.
+        if p['curv'] == 0: p['curv'] = 10000 * 1e10
+    except KeyError as e:
+        print("Please check your parameter:{}".format(e))
 
     if len(args) == 1:
         return p
@@ -159,7 +164,7 @@ def fluCalFun_core(a0,sh,p):
     '''takes in flupara_fit, qz, return fluorescence data.
        Note that 'weights' contains the info of the steps for integration
        a0: the incident angle of X-ray beam, corrected with Qz_offset, in rad.
-       sh: the sample height shift w.r.s. to its norminal position, in A.
+       sh: the sample height shift w.r.t. its norminal position, in A.
        p['wt']: weights for the beam profile, the length of which is the total amount of steps.
        p['k0']: wavevector for incident ray Energy, in KeV.
        p['detR']: detector range, in mm.
@@ -171,7 +176,7 @@ def fluCalFun_core(a0,sh,p):
        p['bC']: ion concentration of the bottom phase, in M.
        p['sC']: ioin surface number density, in A^-2.
        p['qoff']: q off set for the data
-       p['doff']: det range offset for the measurement
+       p['soff']: sample height offset (effoct of detector offset included) for the measurement
        p['l2off']: l2 offset for the measurement
        p['tRho']: electron density of top phase, in A^-3.
        p['bRho']: electron density of bottom phase, in A^-3.
@@ -226,10 +231,10 @@ def fluCalFun_core(a0,sh,p):
     z_ref_l = -(x_ref + p['detR'] / 2) * a1  # reflection with left det. boundary: x=-l/2
     z_ref_r = -(x_ref - p['detR'] / 2) * a1  # reflection with right det. boundary: x=l/2
 
-    # two regions: [-h/2a0,-l/2] & [-l/2,l/2]
+    # two regions: region1: [-h/2a0,-l/2] & region 2: [-l/2,l/2]
     x_region = [(x_s <= -p['detR'] / 2), (x_s > -p['detR'] / 2) * (x_s < p['detR'] / 2)]
 
-    ################### for region x>= l/2  ########################
+    ################### for redgion 3: region x>= l/2  ########################
     x0_region1 = x0[surface[:, 0] > p['detR'] / 2]  # choose x0 with x'>l/2
     wt_region1 = p['wt'][surface[:, 0] > p['detR'] / 2]  # choose weight with x'>l/2
     upper_bulk1 = wt_region1 * \
@@ -237,12 +242,14 @@ def fluCalFun_core(a0,sh,p):
                   (absorb((x0_region1 + p['detR'] / 2) * a0 * mu_eff_inc) -
                    absorb((x0_region1 - p['detR'] / 2) * a0 * mu_eff_inc))
 
-    flu = np.array([0, 0, 0, 0, 0, 0])
+    # define the initial intensity to be just background value
+    flu = np.array([p['bg']] * 6)
+
     # if beam miss the surface entirely, do the following:
     if len(x_s) == 0:  # the entire beam miss the interface, only incidence in upper phase.
         # sh_offset_factor = absorb(-mu_top_emit * center[i] * a0)
         usum_inc = stepsize * np.sum(upper_bulk1)
-        flu[3] = p['hisc'] * usum_inc * N_A * p['tC'] / 1e27  # oil phase incidence only
+        flu[3] += p['hisc'] * usum_inc * N_A * p['tC'] / 1e27  # oil phase incidence only + background
         flu[0] = flu[3]  # total intensity only contains oil phase
     else:
         ref = mfit.refCalFun([], [p['tRho'], p['bRho']], [p['itMu'], p['ibMu']], [3.0], 2 * p['k0'] * a_new)
@@ -280,12 +287,12 @@ def fluCalFun_core(a0,sh,p):
         int_upbk_ref = p['hisc'] * usum_ref * N_A * p['tC'] / 1e27  # metal ions in the upper phase.
         int_sur = p['losc'] * ssum * p['sC']
 
-        flu = np.array([int_bulk+int_sur+int_upbk_inc+int_upbk_ref+p['bg'],  # 2. total fluorescence
-                        int_bulk,  # 3. lower bulk
-                        int_sur,  # 4. interface
-                        int_upbk_inc+int_upbk_ref, # 5. upper bulk
-                        int_upbk_inc,  # 6. upper bulk incidence
-                        int_upbk_ref])  # 7. upper bulk reflection
+        flu += np.array([int_bulk+int_sur+int_upbk_inc+int_upbk_ref,  # 2. total fluorescence + background
+                         int_bulk,  # 3. lower bulk
+                         int_sur,  # 4. interface
+                         int_upbk_inc+int_upbk_ref, # 5. upper bulk
+                         int_upbk_inc,  # 6. upper bulk incidence
+                         int_upbk_ref])  # 7. upper bulk reflection
     return flu
 
 def flu2min(pars, x, p, data=None, eps=None): # residuel for flu fitting
@@ -296,19 +303,17 @@ def flu2min(pars, x, p, data=None, eps=None): # residuel for flu fitting
     alpha = (qz + p['qoff']) / p['k0'] / 2 # include the qz offset.
     a0006 = 0.006 / p['k0'] / 2  # incident angle for qz=0.006
 
-    # for shscan, p['doff'] is used as sh offset, so the following 'p['doff'] * a0' becomes p['doff'].
-    if len(qz) == 1:
-        p['doff'] = p['doff'] / alpha[0]
-
     # initialize fluorescence data 3-D matrix
     flu = np.zeros((len(sh), len(qz), 8))
-    for i, ds in enumerate(sh):
-        for j, a0 in enumerate(alpha):
-            dsh = -p['l2off'] * (a0 - a0006) + p['doff'] * a0 + ds*1e7
-            flu[i, j, 0] = ds
-            flu[i, j, 1] = qz[j]
-            flu[i, j, 2:] = fluCalFun_core(a0, dsh, p)
-
+    try:
+        for i, ds in enumerate(sh):
+            for j, a0 in enumerate(alpha):
+                dsh = -p['l2off'] * (a0 - a0006) + p['soff'] + ds*1e7
+                flu[i, j, 0] = ds
+                flu[i, j, 1] = qz[j]
+                flu[i, j, 2:] = fluCalFun_core(a0, dsh, p)
+    except KeyError as e:
+        print("Please check parameter: {}".format(e))
     if data is None:
         return flu
     if eps is None:
