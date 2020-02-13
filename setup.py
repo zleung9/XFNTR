@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="xfntr",
-    version="0.2.4",
+    version="0.2.0",
     author="Zhu Liang",
     author_email="zliang8@uic.edu",
     description="A software that analyzes xfntr data",
