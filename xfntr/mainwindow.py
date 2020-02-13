@@ -362,7 +362,7 @@ class MainWindow (QMainWindow):
         self.directory = str(QFileInfo(self.flufiles[0]).absolutePath())
         self.updateFluFile()
 
-    def updateFluFile(self): #update flu files in the listwidget
+    def updateFluFile(self): # update flu files in the listwidget
         self.ui.flufileLW.clear()
         for i, f in enumerate(self.flufiles):
             try:
@@ -707,7 +707,7 @@ class MainWindow (QMainWindow):
                                                             directory=self.directory)
             fname = self.saveFileName[0] + '_fit.txt'
             if self.xaxis == 'Qz':
-                fit_to_save = self.flu[0,:,(1,2)]
+                fit_to_save = self.flu[0,:,(1,2)].transpose()
             elif self.xaxis == 'Sh':
                 fit_to_save = self.flu[:,0,(0,2)]
             np.savetxt(fname, fit_to_save, fmt='%.4e\t%.4e')
@@ -722,9 +722,11 @@ class MainWindow (QMainWindow):
             print("An error happens while saving fit file!")
 
     def debugErr(self):
-        flufile = '/Users/zhuzi/work/data/201907Jul/sample5_1mMEuHDEHP_water_flu.txt'
-        parfile = '/Users/zhuzi/work/data/201907Jul/sample5_1mMEuHDEHP_water_gaussian_par.txt'
-        self.flufiles = self.flufiles + [flufile]
+        flufile = ['/Users/zhuzi/work/data/201912Dec/sh_sample03_318_50mMEu(NO3)3_s1h0.2_qz0.0015_flu.txt',
+                   '/Users/zhuzi/work/data/201912Dec/sh_sample03_320_50mMEu(NO3)3_s1h0.2_qz0.0015_flu.txt',
+                   '/Users/zhuzi/work/data/201912Dec/sh_sample03_494_50mMEu(NO3)3_s1h0.2_abs8_qz0.015_flu.txt']
+        parfile = '/Users/zhuzi/work/data/201912Dec/sh_sample03_318_50mMEu(NO3)3_s1h0.2_qz0.0015_par.txt'
+        self.flufiles = self.flufiles + flufile
         self.directory = str(QFileInfo(self.flufiles[0]).absolutePath())
         self.updateFluFile()
 

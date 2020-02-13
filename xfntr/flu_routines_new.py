@@ -6,8 +6,11 @@ import multiprocessing
 r_e = pdtb.constants.electron_radius * 1e10  # classical electron radius, in A
 N_A = pdtb.constants.avogadro_number  # Avogadro number, unitless
 k_B = 1.38065e-23  # Boltzman constant, in J/K
+p_igMu = (1/1.717)*1e-7    # absorption coefficient of 20keV beam by glass
+p_thick = 3.5 * 1e7     # thickness of glass tray in A
 
-absorb =
+# define an function that will be used in the program a lot.
+absorb = lambda x: np.nan_to_num(np.exp(x))
 
 import numpy as np
 import scipy.stats as stat
@@ -180,16 +183,16 @@ def fluCalFun_core(a0,sh,p):
        p['l2off']: l2 offset for the measurement
        p['tRho']: electron density of top phase, in A^-3.
        p['bRho']: electron density of bottom phase, in A^-3.
-       p['itMu']: mu for incident beam in top pahse, in cm^-1
-       p['etMu']: mu for emitted beam in top phass, in cm^-1
-       p['ibMu']: mu for incident beam in bottom pahse, in cm^-1
-       p['ebMu']: mu for emitted beam in bottom phass, in cm^-1
-       p['itBt']: beta for incident beam in top pahse, in cm^-1
-       p['etBt']: beta for emitted beam in top phass, in cm^-1
-       p['ibBt']: beta for incident beam in bottom pahse, in cm^-1
-       p['ebBt']: beta for emitted beam in bottom phass, in cm^-1
-       p['itDt']: delta for incident beam in top pahse, in cm^-1
-       p['etDt']: delta for emitted beam in top phass, in cm^-1
+       p['itMu']: mu for incident beam in top pahse, in A^-1
+       p['etMu']: mu for emitted beam in top phass, in A^-1
+       p['ibMu']: mu for incident beam in bottom pahse, in A^-1
+       p['ebMu']: mu for emitted beam in bottom phass, in A^-1
+       p['itBt']: beta for incident beam in top pahse, in A^-1
+       p['etBt']: beta for emitted beam in top phass, in A^-1
+       p['ibBt']: beta for incident beam in bottom pahse, in A^-1
+       p['ebBt']: beta for emitted beam in bottom phass, in A^-1
+       p['itDt']: delta for incident beam in top pahse, in A^-1
+       p['etDt']: delta for emitted beam in top phass, in A^-1
        p['ibDt']: delta for incident beam in bottom pahse, in cm^-1
        p['ebDt']: delta for emitted beam in bottom phass, in cm^-1
        p['span']: the length of the sample cell, "the span", in A.
@@ -204,18 +207,19 @@ def fluCalFun_core(a0,sh,p):
     center = - sh / a0
 
     # initialize fluorescence data, rows: total, aqueous, organic, interface
-    absorb = lambda x: np.nan_to_num(np.exp(x))
+
 
     # get the position of single ray hitting the surface
     x0 = np.linspace(center-fprint/2, center+fprint/2, steps+1)
     surface = np.array([gm.hit_surface([xx, 0], -a0, p['curv'], p['span']) for xx in x0])
-    miss = np.isinf(surface[:, 1])  # number of rays that miss the interface
-    x_s = surface[:, 0][~miss]  # x' for rays that hit on the interface
-    z_s = surface[:, 1][~miss] # z' for rays that hit on the interface
-    wt_s = p['wt'][~miss]  # weight for rays that hit on the interface
+    hit = np.isfinite(surface[:,0]) * np.isfinite(surface[:,1])  # rays that hit the liquid-liquid interface
+    block = np.isfinite(surface[:,0]) * np.isinf(surface[:,1])  # rays that are blocked by the tray
+    x_s = surface[:, 0][hit]  # x' for rays that hit on the interface
+    z_s = surface[:, 1][hit] # z' for rays that hit on the interface
+    wt_s = p['wt'][hit]  # weight for rays that hit on the interface
 
     # (x,z) and other surface geometry for points where beam hit at the interface.
-    theta = -x_s / p['curv']  # incline angle
+    theta = -x_s / p['curv']  # incident angle
     a_new = a0 + theta  # actual incident angle w.r. to the surface
     # a1 = a0 + 2 * theta
     a1 = a0
@@ -231,10 +235,10 @@ def fluCalFun_core(a0,sh,p):
     z_ref_l = -(x_ref + p['detR'] / 2) * a1  # reflection with left det. boundary: x=-l/2
     z_ref_r = -(x_ref - p['detR'] / 2) * a1  # reflection with right det. boundary: x=l/2
 
-    # two regions: region1: [-h/2a0,-l/2] & region 2: [-l/2,l/2]
+    # two regions: region3: [-h/2a0,-l/2] & region 2: [-l/2,l/2]
     x_region = [(x_s <= -p['detR'] / 2), (x_s > -p['detR'] / 2) * (x_s < p['detR'] / 2)]
 
-    ################### for redgion 3: region x>= l/2  ########################
+    ################### for redgion 1: region x>= l/2  ########################
     x0_region1 = x0[surface[:, 0] > p['detR'] / 2]  # choose x0 with x'>l/2
     wt_region1 = p['wt'][surface[:, 0] > p['detR'] / 2]  # choose weight with x'>l/2
     upper_bulk1 = wt_region1 * \
@@ -251,48 +255,52 @@ def fluCalFun_core(a0,sh,p):
         usum_inc = stepsize * np.sum(upper_bulk1)
         flu[3] += p['hisc'] * usum_inc * N_A * p['tC'] / 1e27  # oil phase incidence only + background
         flu[0] = flu[3]  # total intensity only contains oil phase
-    else:
-        ref = mfit.refCalFun([], [p['tRho'], p['bRho']], [p['itMu'], p['ibMu']], [3.0], 2 * p['k0'] * a_new)
-        p_depth, trans = penetrate((p['itBt'],p['ibBt']), (p['itDt'],p['ibDt']), a_new, p['k0'])
-        p_depth_eff = 1 / (p['ebMu'] + a_new/a0 / p_depth)
+        return flu
 
-        ################### for region -l/2 < x < l/2  #################
-        lower_bulk2 = x_region[1] * wt_s * absorb(-x_s * p['itMu'] - z_s / p_depth) * trans * p_depth * \
-                      (absorb(z_s / p_depth_eff) - absorb(z_inc_r / p_depth_eff))
-        surface = x_region[1] * wt_s * trans * absorb(-p['itMu'] * x_s)
-        upper_bulk2_inc = x_region[1] * wt_s * \
-                          (absorb(-x_inc * p['itMu']) / mu_eff_inc * (
-                                  absorb(z_inc_l * mu_eff_inc) - absorb(z_s * mu_eff_inc)))
-        upper_bulk2_inc[np.isnan(upper_bulk2_inc)] = 0  # if there is nan, set to 0
-        upper_bulk2_ref = x_region[1] * wt_s * \
-                          (absorb(-x_ref * p['itMu']) / mu_eff_ref * ref * (
-                                  absorb(z_ref_r * mu_eff_ref) - absorb(z_s * mu_eff_ref)))
-        upper_bulk2_ref[np.isnan(upper_bulk2_ref)] = 0  # if there is nan, set to 0
+    ref = mfit.refCalFun([], [p['tRho'], p['bRho']], [p['itMu'], p['ibMu']], [3.0], 2 * p['k0'] * a_new)
+    p_depth, trans = penetrate((p['itBt'],p['ibBt']), (p['itDt'],p['ibDt']), a_new, p['k0'])
+    p_depth_eff = 1 / (p['ebMu'] + a_new/a0 / p_depth)
 
-        ###################### for region x<=-l/2 ########################
-        lower_bulk3 = x_region[0] * wt_s * absorb(-x_s * p['itMu'] - z_s / p_depth) * trans * p_depth_eff * \
-                      (absorb(z_inc_l / p_depth_eff) - absorb(z_inc_r / p_depth_eff))
-        upper_bulk3 = x_region[0] * wt_s * absorb(-x_ref * p['itMu']) / mu_eff_ref * ref * \
-                      (absorb(mu_eff_ref * z_ref_r) - absorb(mu_eff_ref * z_ref_l))
+    ################### for region -l/2 < x < l/2  #################
+    lower_bulk2 = x_region[1] * wt_s * absorb(-x_s * p['itMu'] - z_s / p_depth) * trans * p_depth * \
+                  (absorb(z_s / p_depth_eff) - absorb(z_inc_r / p_depth_eff))
+    interface = x_region[1] * wt_s * trans * absorb(-p['itMu'] * x_s)
+    upper_bulk2_inc = x_region[1] * wt_s * \
+                      (absorb(-x_inc * p['itMu']) / mu_eff_inc * (
+                              absorb(z_inc_l * mu_eff_inc) - absorb(z_s * mu_eff_inc)))
+    upper_bulk2_inc[np.isnan(upper_bulk2_inc)] = 0  # if there is nan, set to 0
+    upper_bulk2_ref = x_region[1] * wt_s * \
+                      (absorb(-x_ref * p['itMu']) / mu_eff_ref * ref * (
+                              absorb(z_ref_r * mu_eff_ref) - absorb(z_s * mu_eff_ref)))
+    upper_bulk2_ref[np.isnan(upper_bulk2_ref)] = 0  # if there is nan, set to 0
 
-        # combine the two regions and integrate along x direction by performing np.sum.
-        bsum = stepsize * np.sum(lower_bulk3 + lower_bulk2)
-        ssum = stepsize * np.sum(surface)
-        usum_inc = stepsize * (np.sum(upper_bulk1) + np.sum(upper_bulk2_inc))
-        usum_ref = stepsize * (np.sum(upper_bulk3) + np.sum(upper_bulk2_ref))
+    ###################### for region x<=-l/2 ########################
+    lower_bulk3 = x_region[0] * wt_s * absorb(-x_s * p['itMu'] - z_s / p_depth) * trans * p_depth_eff * \
+                  (absorb(z_inc_l / p_depth_eff) - absorb(z_inc_r / p_depth_eff))
+    upper_bulk3 = x_region[0] * wt_s * absorb(-x_ref * p['itMu']) / mu_eff_ref * ref * \
+                  (absorb(mu_eff_ref * z_ref_r) - absorb(mu_eff_ref * z_ref_l))
+    # if there are rays that are blocked by tray, their intensity is still significent
+    if np.sum(block) > 0:
+        edge = None
+    # combine the two regions and integrate along x direction by performing np.sum.
+    bsum = stepsize * np.sum(lower_bulk3 + lower_bulk2)
+    ssum = stepsize * np.sum(interface)
+    usum_inc = stepsize * (np.sum(upper_bulk1) + np.sum(upper_bulk2_inc))
+    usum_ref = stepsize * (np.sum(upper_bulk3) + np.sum(upper_bulk2_ref))
 
-        # vectorized integration method is proved to reduce the computation time by a factor of 5 to 10.
-        int_bulk = p['losc'] * bsum * N_A * p['bC'] / 1e27
-        int_upbk_inc = p['hisc'] * usum_inc * N_A * p['tC'] / 1e27  # metal ions in the upper phase.
-        int_upbk_ref = p['hisc'] * usum_ref * N_A * p['tC'] / 1e27  # metal ions in the upper phase.
-        int_sur = p['losc'] * ssum * p['sC']
 
-        flu += np.array([int_bulk+int_sur+int_upbk_inc+int_upbk_ref,  # 2. total fluorescence + background
-                         int_bulk,  # 3. lower bulk
-                         int_sur,  # 4. interface
-                         int_upbk_inc+int_upbk_ref, # 5. upper bulk
-                         int_upbk_inc,  # 6. upper bulk incidence
-                         int_upbk_ref])  # 7. upper bulk reflection
+    # vectorized integration method is proved to reduce the computation time by a factor of 5 to 10.
+    int_bulk = p['losc'] * bsum * N_A * p['bC'] / 1e27
+    int_upbk_inc = p['hisc'] * usum_inc * N_A * p['tC'] / 1e27  # metal ions in the upper phase.
+    int_upbk_ref = p['hisc'] * usum_ref * N_A * p['tC'] / 1e27  # metal ions in the upper phase.
+    int_sur = p['losc'] * ssum * p['sC']
+
+    flu += np.array([int_bulk+int_sur+int_upbk_inc+int_upbk_ref,  # 2. total fluorescence + background
+                     int_bulk,  # 3. lower bulk
+                     int_sur,  # 4. interface
+                     int_upbk_inc+int_upbk_ref, # 5. upper bulk
+                     int_upbk_inc,  # 6. upper bulk incidence
+                     int_upbk_ref])  # 7. upper bulk reflection
     return flu
 
 def flu2min(pars, x, p, data=None, eps=None): # residuel for flu fitting
@@ -336,108 +344,6 @@ def multiCore(func, iterable):
     return result
 
 if __name__ == '__main__':
-
-    import matplotlib.pyplot as plt
-    import matplotlib as mpl
-    mpl.rc('xtick', labelsize=15)
-    mpl.rc('ytick', labelsize=15)
-    mpl.rc('axes', labelsize=15)
-    mpl.rc('axes', titlesize=15)
-    mpl.rc('font', family='serif')
-    mpl.rc('mathtext', default='regular', fontset='custom')
-    ticks_x = mpl.ticker.FuncFormatter(lambda x, pos: '{0:g}'.format(x * 1000))
-
-    file_dir = '/Users/zhuzi/work/data/201907Jul/'
-    file_name = 'sample4_50mMEu(NO3)3_scan474-481_gaussian_fit.txt'
-    data = np.loadtxt(file_dir + file_name)
-    x, y= data[:,0], data[:,1]
-
-    flu_par = lm.Parameters()
-    # add tuples:   (NAME       VALUE   VARY MIN  MAX  EXPR BRUTE_STEP)
-    flu_par.add_many(('hisc',   10e-10, 1,  None, None, None, None),  # Calibration factor, unitless
-                     ('losc',   3.11e-10, 1, None, None, None, None),  # Calibration factor, unitless
-                     ('qoff',   0,  0,  None, None, None, None),  # q offset, in A^-1
-                     ('bg',     4.60e-3,  1,  0,    None, None, None),  # background constant, unitless.
-                     ('curv',   100,     1,  0,    None,  None, None),  # surface curvature, in A
-                     ('upbk',   1.00e-3,  0,  0,    None, None, None),  # upper phase concentration, in M
-                     ('surd',   5.e-2,   0,  0,    None, None, None),  # surface density, in A^-2
-                     ('lobk',   1.e-3,  0,  None, None, None, None),  # lower phase concentration, in M
-                     ('soff',   0,    0,  None, None, None, None),  # sh value
-                     ('loff',   0,     0,  None, 0.5, None, None)  # lambda value for sh=lambda(Qz-0.006)
-    )
-
-    sys_par = OrderedDict(
-        [('E_inc', 20),
-         ('E_emt', 5.843),
-         ('mu_top_inc', 0.2730),
-         ('mu_top_emt', 7.4751),
-         ('mu_bot_inc', 0.7018), # was 0.7018
-         ('mu_bot_emt', 26.58), # was 26.58
-         ('rho_top', 0.2591),
-         ('rho_bot', 0.333),
-         ('width', 0.015),
-         ('det_len', 12.7),
-         ('beam', 'Uniform'),
-         ('span', 75.6)]
-    )
-
-    flu_elements = [['Eu', 1, 0.947]]  # name, composition, Ionic Radius(A)
-
-    p = OrderedDict()
-    p = update_flu_parameters(p, flu_par, sys_par, flu_elements)
-
-    qz = np.linspace(0.005, 0.016, 11)
-    qz = np.array([0.006])
-    sh = np.linspace(-0.018, 0.040, 50)
-    sh = np.array([0.01])
-    guess = flu2min(flu_par, (sh,qz), p)
-
-    a = 1
-
-    #########################################################
-    fig = plt.figure(figsize=(8, 10), dpi=100)
-    ax1 = fig.add_subplot(211)
-    ax1.xaxis.set_major_formatter(ticks_x)
-    ax1.set_xlabel(r'$Qz\ (\times 10^{-3} {\AA}^{-1})$', fontsize=15)
-    ax1.set_ylabel('Fluorescence Intensity', fontsize=15)
-    # ax1.set_xlim([sh[0] * 0.8, sh[-1] * 1.1])
-    ax1.set_ylim([-0.01, 0.01])
-    ax1.grid(1)
-    print(guess[:,0,1])
-    ax1.plot(sh, guess[:, 0, 2], ls='-', label='total')
-    ax1.plot(sh, guess[:, 0, 3], ls='-', label='bottom', alpha=0.5)
-    ax1.plot(sh, guess[:, 0, 4], ls='-', label='surface', alpha=0.5)
-    ax1.plot(sh, guess[:, 0, 5], ls='-', label='top', alpha=0.5)
-    # ax1.plot(data[:, 0], data[:, 1], ls='-', label='data')
-    # ax1.errorbar(data[:, 0], data[:, 1], yerr=data[:, 2],
-    #              marker='o', ls='', color='r', label='data')
-    ax1.legend(loc='best')
-
-    # if fit == True:
-    #     fit_range = [0e-3, 16e-3]
-    #     data_to_fit = data[(x >= fit_range[0]) * (x <= fit_range[1])]
-    #
-    #     other_params = (flupara_sys, refpara)
-    #     result = lm.minimize(flu2min, params,
-    #                          args=(data_to_fit[:, 0], data_to_fit[:, 1], data_to_fit[:, 2], other_params))
-    #     print lm.fit_report(result)
-    #     fit_flu = fluCalFun(result.params, flupara_sys, refpara_sys, qz, beam_profile='uniform')
-    #
-    #     ax2 = fig.add_subplot(212)
-    #     ax2.xaxis.set_major_formatter(ticks_x)
-    #     ax2.set_xlabel(r'$Qz\ (\times 10^{-3} {\AA}^{-1})$', fontsize=15)
-    #     ax2.set_ylabel('Fluorescence Intensity', fontsize=15)
-    #     ax2.set_xlim([qz[0] * 0.8, qz[-1] * 1.1])
-    #     # ax1.set_ylim([-0.001, 0.013])
-    #     ax2.grid(1)
-    #
-    #     ref = refModel(qz + result.params['qoff'].value)
-    #     qc = qz[np.sum(ref > 0.9999) - 1]
-    #
-    #     ax2.axvline(qc, color='black', alpha=0.5)
-    #     ax2.plot(qz, fit_flu[0], ls='-', color='b', label='fit')
-    #     ax2.errorbar(data[:, 0], data[:, 1], yerr=data[:, 2],
-    #                  marker='o', ls='', color='r', label='data')
-    #     ax2.legend(loc='best')
-
-    plt.show()
+    p_depth, trans = penetrate((1.35e-10, 5.0e-10), (4.466e-7, 5.84e-7), np.array([3.14]), 1.1355)
+    print(p_depth)
+    print(trans)

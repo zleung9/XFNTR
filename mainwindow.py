@@ -602,8 +602,10 @@ class MainWindow (QMainWindow):
             print("Error: did you set right limit smaller than left limit?")
 
     def debugErr(self):
-        flufile = '/Users/zhuzi/work/data/201907Jul/sample5_1mMEuHDEHP_water_flu.txt'
-        parfile = '/Users/zhuzi/work/data/201907Jul/sample5_1mMEuHDEHP_water_gaussian_par.txt'
+        flufile = ['sh_sample03_318_50mMEu(NO3)3_s1h0.2_qz0.0015_flu.txt',
+                   'sh_sample03_320_50mMEu(NO3)3_s1h0.2_qz0.0015_flu.txt',
+                   'sh_sample03_494_50mMEu(NO3)3_s1h0.2_abs8_qz0.015_flu.txt']
+        parfile = 'sh_sample03_318_50mMEu(NO3)3_s1h0.2_qz0.0015_par.txt'
         self.flufiles = self.flufiles + [flufile]
         self.directory = str(QFileInfo(self.flufiles[0]).absolutePath())
         self.updateFluFile()
