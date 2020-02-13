@@ -15,7 +15,11 @@ def laser_gun(origin, alpha, wall=None,celling=None):
         y = celling
         x = origin[0] + 1/np.tan(alpha) * (celling - origin[1])
     else:
+<<<<<<< HEAD
         print "please define a stop"
+=======
+        print("please define a stop")
+>>>>>>> master
         return None
     return np.array([x, y])
 

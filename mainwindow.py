@@ -4,6 +4,10 @@
 # https://stackoverflow.com/questions/37888581/pyinstaller-ui-files-filenotfounderror-errno-2-no-such-file-or-directory
 import sys
 import os
+<<<<<<< HEAD
+=======
+import time
+>>>>>>> master
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
     try:
@@ -15,18 +19,52 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 #######################################################
 
+<<<<<<< HEAD
 from PyQt4 import uic
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
+=======
+
+# define an exception hook to prevent the app from crashing on exception
+# reference: https://stackoverflow.com/questions/38020020/pyqt5-app-exits-on-error-where-pyqt4-app-would-not
+sys._excepthook = sys.excepthook
+def exception_hook(exctype, value, traceback):
+    print(exctype, value, traceback)
+    sys._excepthook(exctype, value, traceback)
+sys.excepthook = exception_hook
+
+
+
+from collections import OrderedDict
+
+import matplotlib.pyplot as plt
+from cycler import cycler
+default_cycler = (cycler(color=['b','g','c','m','y','k']))
+plt.rc('axes', prop_cycle=default_cycler)
+plt.rc('lines',markersize=3, linewidth=1)
+
+from PyQt5 import uic
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
+>>>>>>> master
 
 import scipy.stats as stat
 from scipy.interpolate import interp1d
 from scipy.special import *
+<<<<<<< HEAD
 import numpy as np
 
 from collections import OrderedDict
 import cmath
 import matplotlib as mpl
+=======
+
+import numpy as np
+# import the following three modules in order to work with PyInstaller
+import numpy.random.common
+import numpy.random.bounded_integers
+import numpy.random.entropy
+>>>>>>> master
 
 import lmfit as lm
 import periodictable as pdtb
@@ -34,8 +72,14 @@ r_e = pdtb.constants.electron_radius * 1e10  # classical electron radius, in A
 N_A = pdtb.constants.avogadro_number  # Avogadro number, unitless
 k_B = 1.38065e-23  # Boltzman constant, in J/K
 
+<<<<<<< HEAD
 import fit_ref as mfit
 import flu_geometry_routines as gm
+=======
+# import fit_ref as mfit
+import flu_routines_new as fl
+# import flu_geometry_routines as gm
+>>>>>>> master
 
 # mplwidget is imported explicitly here because PyInstaller needs to find it.
 import mplwidget
@@ -43,6 +87,10 @@ import mplwidget
 (Ui_MainWindow, QMainWindow) = uic.loadUiType(resource_path('GUI/mainwindow.ui'))
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> master
 class MainWindow (QMainWindow):
     """MainWindow inherits QMainWindow"""
 
@@ -61,13 +109,20 @@ class MainWindow (QMainWindow):
         self.fludata = []
         self.flufitdata = []
         self.beam = 'uniform'
+<<<<<<< HEAD
+=======
+        self.flucal_par = OrderedDict()
+>>>>>>> master
         self.flu = 0
         self.selectedflufiles_rows = []
         self.selectedflufitfiles_rows = []
         self.eleradius = pdtb.constants.electron_radius*1e10
         self.avoganum = pdtb.constants.avogadro_number
         self.boltzmann = 1.38065e-23
+<<<<<<< HEAD
         mpl.rc('axes',color_cycle = ['b','g','c','m','y','k'])
+=======
+>>>>>>> master
         self.errorlist = np.array([[1, 1.074], [2, 1.204], [3, 1.222],
                                 [4, 1.220], [5, 1.213], [6, 1.205], 
                                 [7, 1.198], [8, 1.191], [9, 1.184], 
@@ -84,27 +139,51 @@ class MainWindow (QMainWindow):
                                 [100, 1.069], [120, 1.063], [140, 1.059], 
                                 [160, 1.055], [180, 1.052]]) #, [3000, 1.050]])
 
+<<<<<<< HEAD
         self.setupGUI()
         self.updateFluPar()
 
     def setupGUI(self):
+=======
+        self.setupUI()
+        self.updatePar()
+        self.debugErr()
+
+    def setupUI(self):
+>>>>>>> master
         self.ui.addflufilePB.clicked.connect(self.addFluFile)
         self.ui.flufileLW.itemSelectionChanged.connect(self.updateSelectedFluFile)
         self.ui.rmflufilePB.clicked.connect(self.removeFluFile)
         self.ui.addflufitfilePB.clicked.connect(self.addFluFitFile)
         self.ui.flufitfileLW.itemSelectionChanged.connect(self.updateSelectedFluFitFile)
         self.ui.rmflufitfilePB.clicked.connect(self.removeFluFitFile)
+<<<<<<< HEAD
 
+=======
+        self.ui.fluxaxisCB.currentIndexChanged.connect(self.updateUI)
+>>>>>>> master
         self.ui.fluqcCB.stateChanged.connect(self.updateFluPlot)
         self.ui.flulineCB.stateChanged.connect(self.updateFluPlot)
         self.ui.flulegendCB.stateChanged.connect(self.updateFluPlot)
         self.ui.flulegendlocCoB.currentIndexChanged.connect(self.updateFluPlot)
         self.ui.flulogyCB.stateChanged.connect(self.updateFluPlot)
         self.ui.flugridCB.stateChanged.connect(self.updateFluPlot)
+<<<<<<< HEAD
 
         self.ui.flushowCB.stateChanged.connect(self.updateFluPlot)
         self.ui.flucompCB.stateChanged.connect(self.updateFluPlot)
 
+=======
+        self.ui.flushowCB.stateChanged.connect(self.updateFluPlot)
+        self.ui.flucompCB.stateChanged.connect(self.updateFluPlot)
+        self.ui.flusimuPB.clicked.connect(self.updateFluCal)
+        self.ui.flufitPB.clicked.connect(self.fitFlu)
+        self.ui.flusaveCB.activated.connect(self.saveFlu)
+        self.ui.fluloadCB.activated.connect(self.loadFlu)
+        self.ui.insflusubPB.clicked.connect(self.insFluIon)
+        self.ui.rmflusubPB.clicked.connect(self.rmFluIon)
+        self.ui.fluErrPB.clicked.connect(self.fluErrorInit)
+>>>>>>> master
         # connect system parameter signals
         self.ui_syspar = OrderedDict(
             [('E_inc',self.ui.fluIncEnLE),
@@ -118,11 +197,18 @@ class MainWindow (QMainWindow):
              ('width', self.ui.fluwidthLE),
              ('det_len',self.ui.fludetLE)]
         )
+<<<<<<< HEAD
 
         for p,u in self.ui_syspar.iteritems():
             u.returnPressed.connect(self.updateFluPar)
             u.returnPressed.connect(self.updateFluCal)
         self.ui.flubmpfCombo.currentIndexChanged.connect(self.updateFluPar)
+=======
+        for p,u in self.ui_syspar.items():
+            u.returnPressed.connect(self.updatePar)
+            u.returnPressed.connect(self.updateFluCal)
+        self.ui.flubmpfCombo.currentIndexChanged.connect(self.updatePar)
+>>>>>>> master
 
         # connect fitting parameter signals
         self.ui_params = OrderedDict(
@@ -137,6 +223,7 @@ class MainWindow (QMainWindow):
              ('loff', [self.ui.fluloffLE, self.ui.fluloffCB]),
              ('soff', [self.ui.flusoffLE, self.ui.flusoffCB])]
         )
+<<<<<<< HEAD
 
         for p,u in self.ui_params.iteritems():
             u[0].returnPressed.connect(self.updateFluPar)
@@ -172,17 +259,58 @@ class MainWindow (QMainWindow):
 
         # set text for system parameters
         for p, u in self.ui_syspar.iteritems():
+=======
+        for p,u in self.ui_params.items():
+            u[0].returnPressed.connect(self.updatePar)
+            u[0].returnPressed.connect(self.updateFluCal)
+            u[1].stateChanged.connect(self.updatePar)
+
+    def updateUI(self):
+
+        # set text for fitting parameters
+        for p, u in self.ui_params.items():
+            if p in ['curv', 'loff']:
+                u[0].setText(format(self.flu_par[p].value, '.4f'))
+            else:
+                u[0].setText(format(self.flu_par[p].value, '.2e'))
+
+        # set text for system parameters
+        for p, u in self.ui_syspar.items():
+>>>>>>> master
             u.setText(format(self.sys_par[p], '.4f'))
 
         # set beam profile
         index = self.ui.flubmpfCombo.findText(self.beam)
         self.ui.flubmpfCombo.setCurrentIndex(index)
 
+<<<<<<< HEAD
     def updateFluPar(self):  #initialize the flu parameters
+=======
+        self.xaxis = self.ui.fluxaxisCB.currentText()
+        if self.xaxis == 'Qz':
+            _xrange = '0.005:0.016'
+            _sh_offset = 'Det offset'
+            self.ui.fluloffCB.setCheckable(True)
+            self.ui.fluloffCB.setText('L2 offset')
+        elif self.xaxis == 'Sh':
+            _xrange = '-0.018:0.030'
+            _sh_offset = 'Sh offset'
+            self.ui.fluloffCB.setCheckable(False)
+            self.ui.fluloffCB.setText('')
+            self.ui.fluloffLE.setText(format(0,'.1f'))
+        self.ui.flusimuqzrgLE.setText(_xrange)
+        self.ui.flufitranLE.setText(_xrange)
+        self.ui.flusoffCB.setText(_sh_offset)
+
+        self.updatePar()
+
+    def updatePar(self):  #initialize the flu parameters
+>>>>>>> master
 
         # system parameters for fluorescence
         self.beam = str(self.ui.flubmpfCombo.currentText()) # beam profile
         self.sys_par = OrderedDict()
+<<<<<<< HEAD
         for p, u in self.ui_syspar.iteritems():
             self.sys_par[p] = float(u.text())
 
@@ -472,11 +600,61 @@ class MainWindow (QMainWindow):
     def addFluFile(self): #add flu files into the listwidget and deselect all flu files in the listwidget
 
         f = QFileDialog.getOpenFileNames(
+=======
+        for p, u in self.ui_syspar.items():
+            self.sys_par[p] = float(u.text())
+        self.sys_par['beam'] = self.ui.flubmpfCombo.currentText()
+        self.sys_par['span'] = 75.6 # the length of sample cell, in mm.
+
+        # fitting parameters for fluorescence
+        self.flu_par = lm.Parameters()
+        for name,par in self.ui_params.items():
+            self.flu_par.add(name, value=float(par[0].text()),vary=par[1].isChecked(),
+                            min=None, max=None, expr=None, brute_step=None)
+        # fitting (if any) parameters for reflectivity
+        self.ref_par = lm.Parameters()
+            # add tuples:       (NAME       VALUE   VARY MIN  MAX  EXPR BRUTE_STEP)
+        self.ref_par.add_many( ('rho_t', self.sys_par['rho_top'], 0, None, None, None, None),
+                               ('rho_b', self.sys_par['rho_bot'], 0, None, None, None, None),
+                               ('mu_t', self.sys_par['mu_top_inc'], 0, None, None, None, None),
+                               ('mu_b', self.sys_par['mu_bot_inc'], 0, None, None, None, None),
+                               ('sigma0', 3.0, 0, None, None, None, None),
+                               ('q_off', 0, 0, None, None, None, None ))
+        # info of element in the system
+        self.flu_elements = [['Eu', 1, 0.947]]  # name, composition, Ionic Radius(A)
+
+        # update the list of sh and qz
+        try:
+            self.simu_range = [float(i) for i in str(self.ui.flusimuqzrgLE.text()).split(':')]
+        except:
+            print("Error: Check if the range is right.")
+        self.xaxis = self.ui.fluxaxisCB.currentText()
+        if self.xaxis == 'Qz':
+            self.sh = np.array([0])
+            self.qz = np.linspace(self.simu_range[0], self.simu_range[1], 200)
+        elif self.xaxis == 'Sh':
+            self.qz = np.array([0])
+            self.sh = np.linspace(self.simu_range[0], self.simu_range[1], 200)
+
+        # update parameters for flurescence calculation
+        self.flucal_par = fl.update_flu_parameters(self.flucal_par,
+                                                   self.flu_par,
+                                                   self.sys_par,
+                                                   self.flu_elements)
+
+    def addFluFile(self): #add flu files into the listwidget and deselect all flu files in the listwidget
+
+        f, _ = QFileDialog.getOpenFileNames(
+>>>>>>> master
             caption='Select Multiple Fluorescence Files to import',
             directory=self.directory,
             filter='Flu Files (*.flu*;*_flu.txt)'
         )
+<<<<<<< HEAD
         self.flufiles = self.flufiles + map(str, f)
+=======
+        self.flufiles = self.flufiles + f
+>>>>>>> master
         self.directory = str(QFileInfo(self.flufiles[0]).absolutePath())
         self.updateFluFile()
 
@@ -508,12 +686,20 @@ class MainWindow (QMainWindow):
         self.updateFluFile()
 
     def addFluFitFile(self): #add flu fit files into the listwidget and deselect flu fit files in the listwidget
+<<<<<<< HEAD
         f = QFileDialog.getOpenFileNames(
+=======
+        f, _ = QFileDialog.getOpenFileNames(
+>>>>>>> master
             caption = 'Select Multiple Fluorescence Fit Files to import',
             directory = self.directory,
             filter = 'FIT Files (*.fit*; *_fit.txt)'
         )
+<<<<<<< HEAD
         self.flufitfiles = self.flufitfiles + map(str, f)
+=======
+        self.flufitfiles = self.flufitfiles + f
+>>>>>>> master
         self.directory = str(QFileInfo(self.flufitfiles[0]).absolutePath())
         self.updateFluFitFile()
 
@@ -550,9 +736,12 @@ class MainWindow (QMainWindow):
 
         ax1 = self.ui.fluPW.canvas.ax
         ax1.clear()
+<<<<<<< HEAD
         ax1.set_xlabel(r'$Q_z$'+' '+r'$[\AA^{-1}]$')
         ax1.set_ylabel('Intensity [a.u.]')
         ax1.set_xlim([0.004,0.017])
+=======
+>>>>>>> master
 
         if self.ui.flulineCB.isChecked():
             ls = '-'
@@ -569,6 +758,7 @@ class MainWindow (QMainWindow):
             for i, d in enumerate(self.flufitdata):
                 ax1.plot(d[:, 0], d[:, 1],marker='', ls='-', label=' fit #'+str(i + 1))
 
+<<<<<<< HEAD
         if self.ui.fluqcCB.isChecked():
             ax1.axvline(self.qc, color='black', alpha=0.5)
 
@@ -579,6 +769,38 @@ class MainWindow (QMainWindow):
                 ax1.plot(self.flu[0], self.flu[2], ls='-', label='water',color='b', alpha=0.5)
                 ax1.plot(self.flu[0], self.flu[3]+self.flu[4], ls='-', label='oil',color='g', alpha=0.5)
                 ax1.plot(self.flu[0], self.flu[5], ls='-', label='interface',color='purple', alpha=0.5)
+=======
+        self.xaxis = self.ui.fluxaxisCB.currentText()
+        if self.xaxis == 'Qz':
+            x_range = [0.004, 0.017]
+            x_label = r'$Q_z$' + ' ' + r'$[\AA^{-1}]$'
+            if self.ui.fluqcCB.isChecked():
+                ax1.axvline(self.qc, color='black', alpha=0.5)
+        elif self.xaxis == 'Sh':
+            x_range = [-0.020, 0.040]
+            x_label = r'$\Delta sh$' + ' ' + r'$[mm]$'
+        ax1.set_xlabel(x_label)
+        ax1.set_ylabel(r'$Intensity [a.u.]$')
+        ax1.set_xlim(x_range)
+
+        if self.ui.flushowCB.isChecked():
+            if self.flu is 0:
+                print('Please print simulate button first!!')
+                return
+            else:
+                if self.xaxis == 'Qz':
+                    x = self.qz
+                    y = self.flu[0, :, 2:]
+                elif self.xaxis == 'Sh':
+                    x = self.sh
+                    y = self.flu[:, 0, 2:]
+
+            ax1.plot(x, y[:,0], ls='-', label='total', color='r')
+            if self.ui.flucompCB.isChecked():
+                ax1.plot(x, y[:,1], ls='-', label='water',color='b', alpha=0.5)
+                ax1.plot(x, y[:,2], ls='-', label='interface',color='purple', alpha=0.5)
+                ax1.plot(x, y[:,3], ls='-', label='oil', color='g', alpha=0.5)
+>>>>>>> master
 
         if self.ui.flulegendCB.isChecked():
             ax1.legend(loc = str(self.ui.flulegendlocCoB.currentText()),
@@ -633,6 +855,7 @@ class MainWindow (QMainWindow):
 
     def updateFluCal(self): # calculate the flu  based on current parameters.
 
+<<<<<<< HEAD
         self.updateFluPar()
         if not self.ui.flushowCB.isChecked():
             return # if show is not checked, do nothing.
@@ -689,10 +912,56 @@ class MainWindow (QMainWindow):
                                               'beam_profile':self.beam})
         self.params = self.flu_result.params
 
+=======
+        self.updatePar()
+
+        p = OrderedDict() # must initialize p before updating
+        p = fl.update_flu_parameters(p, self.flu_par, self.sys_par,self.flu_elements)
+        if not self.ui.flushowCB.isChecked():
+            return # if show is not checked, do nothing.
+
+        if self.xaxis == 'Qz':
+            self.qc = np.sqrt(2*(p['ibDt']-p['itDt'])) * 2 * p['k0']
+
+        self.flu = fl.flu2min(self.flu_par, (self.sh, self.qz), p)
+
+        self.updateFluPlot()
+
+    def fitFlu(self, errorbar=False):
+
+        selectedflufiles = self.ui.flufileLW.selectedItems()
+        if len(selectedflufiles) != 1:
+            print("Error: please select one data to fit.")
+            raise Exception
+        data = self.fludata[0]
+
+        try:
+            self.fit_range = [float(i) for i in str(self.ui.flufitranLE.text()).split(':')]
+        except:
+            print("Error: Check if the range is right.")
+        self.updatePar()
+
+        data_to_fit = data[(data[:,0] >= self.fit_range[0]) * (data[:, 0] <= self.fit_range[1])]
+
+        if self.xaxis == 'Qz':
+            self.qz = data_to_fit[:,0]
+        elif self.xaxis == 'Sh':
+            self.sh = data_to_fit[:,0]
+
+        self.flu_result = lm.minimize(fl.flu2min, self.flu_par,
+                                      args=((self.sh, self.qz), self.flucal_par),
+                                      kws={'data':data_to_fit[:,1], 'eps':data_to_fit[:,2]}
+                                      )
+        self.flu_par = self.flu_result.params
+
+        # for uncertainty calculation, the following is not needed
+        if errorbar == True: return
+>>>>>>> master
         tb = self.ui.fluparaTB
         tb.clear()
         tb.append(lm.fit_report(self.flu_result))
 
+<<<<<<< HEAD
         self.updateGUI()  # it has to be before updateFluCal()
         self.updateFluCal() # self.updateGUI() has to be excucated before it reads parameters from GUI
 
@@ -702,6 +971,10 @@ class MainWindow (QMainWindow):
                        shscan=shscan,beam_profile=beam_profile)
         residual = (self.flu[1] - y) / yerr
         return residual
+=======
+        self.updateUI()  # it has to be before updateFluCal()
+        self.updateFluCal() # self.updateUI() has to be excucated before it reads parameters from GUI
+>>>>>>> master
 
     def saveFlu(self):
         if str(self.ui.flusaveCB.currentText())=='Save Fit':
@@ -711,7 +984,11 @@ class MainWindow (QMainWindow):
 
     def saveFluPara(self):
 
+<<<<<<< HEAD
         self.updateFluPar()
+=======
+        self.updatePar()
+>>>>>>> master
 
         self.saveFileName = str(QFileDialog.getSaveFileName(caption='Save Fluorescence Fitting Parameters',
                                                             directory=self.directory))
@@ -723,11 +1000,16 @@ class MainWindow (QMainWindow):
                     fid.write('Chi_Square\tNA\n')
 
                 fid.write('Fitting_Parameters\n')
+<<<<<<< HEAD
                 for p, u in self.ui_params.iteritems():
+=======
+                for p, u in self.ui_params.items():
+>>>>>>> master
                     fid.write(p + '\t\t' + format(float(u[0].text()),'.3e') + '\n')
 
                 fid.write('\nSystem_Parameters\n')
                 fid.write('Beam_Profile\t\t' + self.beam +'\n')
+<<<<<<< HEAD
                 for p, u in self.ui_syspar.iteritems():
                     fid.write(p + '\t\t' + format(float(u.text()), '.4f') + '\n')
 
@@ -735,6 +1017,15 @@ class MainWindow (QMainWindow):
 
             except:
                 print 'Oops! Something went wrong, please check your parameters!'
+=======
+                for p, u in self.ui_syspar.items():
+                    fid.write(p + '\t\t' + format(float(u.text()), '.4f') + '\n')
+
+                print("Parameters saved!")
+
+            except:
+                print('Oops! Something went wrong, please check your parameters!')
+>>>>>>> master
 
     def loadFlu(self):
         if str(self.ui.fluloadCB.currentText())=='Load Para':
@@ -743,7 +1034,11 @@ class MainWindow (QMainWindow):
     def loadFluPara(self):
 
         try:
+<<<<<<< HEAD
             filename = QFileDialog.getOpenFileName(caption='Select Parameter File to read',
+=======
+            filename, _ = QFileDialog.getOpenFileName(caption='Select Parameter File to read',
+>>>>>>> master
                                                    directory=self.directory,
                                                    filter='Par Files (*.par*;*_par.txt)')
             self.directory = str(QFileInfo(filename).absolutePath())
@@ -753,13 +1048,18 @@ class MainWindow (QMainWindow):
             return
         # set ui values with loaded value
         line_num = 0
+<<<<<<< HEAD
         which_par = 0 # 0: not a parameter line; 1: fitting parameter line; 2: system parameter line
+=======
+        line_type = 0 # 0: not a parameter line; 1: fitting parameter line; 2: system parameter line
+>>>>>>> master
         while True:
             try:
                 line = fdata[line_num].split()
             except IndexError: # end of file
                 break
             if line == []:
+<<<<<<< HEAD
                 which_par =0
             else:
                 if line[0] == 'Fitting_Parameters':
@@ -770,11 +1070,27 @@ class MainWindow (QMainWindow):
                 elif which_par == 1:
                     self.params[line[0]].value = float(line[1])
                 elif which_par == 2:
+=======
+                line_type = 0
+            else:
+                if line[0] == 'Fitting_Parameters':
+                    line_type = 1
+                elif line[0] == 'Beam_Profile':
+                    self.beam = line[1]
+                    line_type = 2
+                elif line_type == 1:
+                    self.flu_par[line[0]].value = float(line[1])
+                elif line_type == 2:
+>>>>>>> master
                     self.sys_par[line[0]] = float(line[1])
             line_num += 1
 
         # update parameter with new ui values
+<<<<<<< HEAD
         self.updateGUI()
+=======
+        self.updateUI()
+>>>>>>> master
         self.updateFluCal()
 
     def saveFluFitDig(self):
@@ -810,17 +1126,66 @@ class MainWindow (QMainWindow):
                                                                 directory=self.directory))
             fname = self.saveFileName+'_fit.txt'
 
+<<<<<<< HEAD
             fit_to_save = self.flu[:2].transpose()
+=======
+            if self.xaxis == 'Qz':
+                fit_to_save = self.flu[0,:,(1,2)].transpose()
+            elif self.xaxis == 'Sh':
+                fit_to_save = self.flu[:,0,(0,2)].transpose()
+
+>>>>>>> master
             np.savetxt(fname, fit_to_save, fmt='%.4e\t%.4e')
             self.flusavefitindex=0
             self.uiflusavefit.close()
 
         except:
+<<<<<<< HEAD
             print "Error: did you set right limit smaller than left limit?"
+=======
+            print("Error: did you set right limit smaller than left limit?")
+
+    def debugErr(self):
+        flufile = ['sh_sample03_318_50mMEu(NO3)3_s1h0.2_qz0.0015_flu.txt',
+                   'sh_sample03_320_50mMEu(NO3)3_s1h0.2_qz0.0015_flu.txt',
+                   'sh_sample03_494_50mMEu(NO3)3_s1h0.2_abs8_qz0.015_flu.txt']
+        parfile = 'sh_sample03_318_50mMEu(NO3)3_s1h0.2_qz0.0015_par.txt'
+        self.flufiles = self.flufiles + [flufile]
+        self.directory = str(QFileInfo(self.flufiles[0]).absolutePath())
+        self.updateFluFile()
+
+        with open(str(parfile)) as fid:
+            fdata = fid.readlines()
+        # set ui values with loaded value
+        line_num = 0
+        line_type = 0  # 0: not a parameter line; 1: fitting parameter line; 2: system parameter line
+        while True:
+            try:
+                line = fdata[line_num].split()
+            except IndexError:  # end of file
+                break
+            if line == []:
+                line_type = 0
+            else:
+                if line[0] == 'Fitting_Parameters':
+                    line_type = 1
+                elif line[0] == 'Beam_Profile':
+                    self.beam = line[1]
+                    line_type = 2
+                elif line_type == 1:
+                    self.flu_par[line[0]].value = float(line[1])
+                elif line_type == 2:
+                    self.sys_par[line[0]] = float(line[1])
+            line_num += 1
+        # update parameter with new ui values
+        self.updateUI()
+        self.updateFluCal()
+>>>>>>> master
 
     def fluErrorInit(self):
 
         # choose the parameter for which the chisq is calculated
+<<<<<<< HEAD
         fluerr_pname_to_fit_num = 0 # initialize # of the chosen parameters
         try:
             for i,check_box in enumerate(self.uifluCB):
@@ -865,12 +1230,43 @@ class MainWindow (QMainWindow):
             format((self.fluerr_para_to_fit[0] - half_range_to_fit), '.2e'))
         self.uifluerr1.rightLimitLE.setText( # set right limit
             format((self.fluerr_para_to_fit[0] + half_range_to_fit), '.2e'))
+=======
+        self.fluerr_pname = [] # initialize # of the chosen parameters
+        try:
+            self.fluerr_pname = [p for p,u in self.ui_params.items() if u[1].isChecked()]
+            if len(self.fluerr_pname) > 1:
+                raise ValueError
+            print("Calculating Chi-square for:", *self.fluerr_pname)
+        except ValueError:
+            print(" Did u pick the right number of parameters to fit?\n\n")
+            # if multiple para's r checked, uncheck all and raise error
+            for name in self.fluerr_pname:
+                self.ui_params[name][1].setChecked(False)
+            raise
+
+        self.uifluerr1=uic.loadUi('GUI/err1.ui',QDialog(self))
+        self.uifluerr1.label.setText('Uncertainty Calculation for Parameter:' + self.fluerr_pname[0])
+
+        best_value = float(self.ui_params[self.fluerr_pname[0]][0].text())
+        half_range_to_fit = abs(best_value*0.2)
+        # the length of left and right half of range for the chosen values.
+        self.uifluerr1.bestvalLE.setText(format(best_value, '.2e'))
+        self.uifluerr1.leftLimitLE.setText(  # set left limit
+            format(best_value - half_range_to_fit, '.2e'))
+        self.uifluerr1.rightLimitLE.setText( # set right limit
+            format(best_value + half_range_to_fit, '.2e'))
+>>>>>>> master
 
         self.uifluerr1.numIntervalLE.setText(format(10  ,'d'))
 
         # connect the pushbutton to next step
+<<<<<<< HEAD
         self.uifluerr1.cancelPB.clicked.connect( \
             lambda x: self.uifluerr1.close())
+=======
+        # self.uifluerr1.cancelPB.clicked.connect(lambda x: self.uifluerr1.close())
+        self.uifluerr1.cancelPB.clicked.connect(self.uifluerr1.close)
+>>>>>>> master
         self.uifluerr1.nextPB.clicked.connect(self.fluErrorPara)
         self.uifluerr1.show()
 
@@ -891,6 +1287,7 @@ class MainWindow (QMainWindow):
         self.fluerr_chisq_list = np.zeros(self.fluerr_fit_range.shape)
 
         # automatically toggle the state of fiting and fixed parameters
+<<<<<<< HEAD
         for i,check_box in enumerate(self.uifluCB):
             if i in [2,4]: # always uncheck y_scale and bg_lin
                 check_box.setChecked(False)
@@ -903,6 +1300,16 @@ class MainWindow (QMainWindow):
         self.uifluerr2 = uic.loadUi('err2.ui',QDialog(self))
         self.uifluerr2.label.setText('Please select other parameters to fit')
         self.uifluerr2.cancelPB.clicked.connect(lambda x: self.uifluerr2.close())
+=======
+        for p, u in self.ui_params.items():  u[1].toggle()
+
+        # close the first dialog and open a new dialog
+        self.uifluerr2 = uic.loadUi('GUI/err2.ui', QDialog(self))
+        self.uifluerr2.label.setText('Please check parameters to fit')
+        self.uifluerr2.fluErrorProgress.setMaximum(len(self.fluerr_fit_range))
+        # self.uifluerr2.cancelPB.clicked.connect(lambda x: self.uifluerr2.close())
+        self.uifluerr2.cancelPB.clicked.connect(self.uifluerr2.close)
+>>>>>>> master
         self.uifluerr2.nextPB.clicked.connect(self.fluErrorFit)
 
         self.uifluerr2.show()
@@ -911,7 +1318,11 @@ class MainWindow (QMainWindow):
 
         self.uifluerr2.close()
         # create a progress bar for displaying progress
+<<<<<<< HEAD
         self.progressDialog=QProgressDialog('Calculating Chi-square','Abort',0,100)
+=======
+        self.progressDialog = QProgressDialog('Calculating Chi-square', 'Abort', 0, 100)
+>>>>>>> master
         self.progressDialog.setWindowModality(Qt.WindowModal)
         self.progressDialog.setWindowTitle('Wait')
         self.progressDialog.setAutoClose(True)
@@ -920,6 +1331,7 @@ class MainWindow (QMainWindow):
         self.progressDialog.setMaximum(len(self.fluerr_fit_range))
         self.progressDialog.show()
 
+<<<<<<< HEAD
 
         # create a Parameter() object for fitting
         self.fluerr_parameters = lm.Parameters()
@@ -966,6 +1378,37 @@ class MainWindow (QMainWindow):
         # calculate the left/right error for the parameter
         funChisqFactor=interp1d(self.errorlist[:,0],self.errorlist[:,1],kind='cubic')
         chisq_factor = funChisqFactor(fluresult.nfree) # chisq_factor corresponding to degree of freedom
+=======
+        # create a Parameter() object for fitting
+        self.updatePar()  # update parameters to fit with GUI
+        fixed_par = self.flu_par[self.fluerr_pname[0]]
+        fixed_par.vary = False # make sure the chosen parameter does not vary
+        # initialize the progress bar
+        progress, TIME_LIMIT = 0, 100
+        for i,value in enumerate(self.fluerr_fit_range):
+            fixed_par.value = value # for each value assigned to the chosen parameter
+            self.fitFlu() # fit the data with the current parameter configuration
+            self.fluerr_chisq_list[i] = self.flu_result.redchi
+            progress += 1
+            self.uifluerr2.fluErrorProgress.setValue(progress)
+            # if self.progressDialog.wasCanceled() == True: break
+            if self.uifluerr2.cancelPB.isChecked(): break
+
+        self.progressDialog.hide()
+
+        # # fit data and calculate chisq at each grid point
+        # for i,para_value in enumerate(self.fluerr_fit_range):
+        #     self.fluerr_parameters[self.fluerr_pname_to_fit].value = para_value
+        #     fluresult=lm.minimize(self.flu2min, self.fluerr_parameters, args=(x,y,yerr))
+        #     self.fluerr_chisq_list[i] = fluresult.redchi
+        #     # update progress
+        #
+        # self.progressDialog.hide()
+
+        # calculate the left/right error for the parameter
+        funChisqFactor=interp1d(self.errorlist[:,0],self.errorlist[:,1],kind='cubic')
+        chisq_factor = funChisqFactor(self.flu_result.nfree) # chisq_factor corresponding to degree of freedom
+>>>>>>> master
         idx_min_chisq = np.argmin(self.fluerr_chisq_list[1:]) + 1
         min_chisq = np.min(self.fluerr_chisq_list[1:])
         self.target_chisq = min_chisq * chisq_factor
@@ -986,16 +1429,25 @@ class MainWindow (QMainWindow):
         except:
             right_err_str = "not found"
 
+<<<<<<< HEAD
         #
         self.uifluerr3=uic.loadUi('err3.ui',QDialog(self))
         self.uifluerr3.label.setText( 'Plot for Chi-square vs Parameter: '
                                     + self.fluerr_pname_to_fit)
+=======
+        self.uifluerr3=uic.loadUi('GUI/err3.ui',QDialog(self))
+        self.uifluerr3.label.setText('Plot for Chi-square vs Parameter:'+self.fluerr_pname[0])
+>>>>>>> master
         self.uifluerr3.minchiLE.setText(format(min_chisq,'.2f'))
         self.uifluerr3.tarchiLE.setText(format(self.target_chisq,'.2f'))
         self.uifluerr3.lefterrLE.setText(left_err_str)
         self.uifluerr3.righterrLE.setText(right_err_str)
         self.uifluerr3.logyCB.stateChanged.connect(self.fluErrorPlot)
         self.uifluerr3.closePB.clicked.connect(lambda x: self.uifluerr3.close())
+<<<<<<< HEAD
+=======
+        self.uifluerr3.closePB.clicked.connect(self.uifluerr3.close)
+>>>>>>> master
         self.uifluerr3.savePB.clicked.connect(self.fluErrorSave)
         self.uifluerr3.show()
         self.fluErrorPlot()
@@ -1003,7 +1455,11 @@ class MainWindow (QMainWindow):
     def fluErrorPlot(self):
         the_ax = self.uifluerr3.plotWidget.canvas.ax
         the_ax.clear()
+<<<<<<< HEAD
         the_ax.set_xlabel(self.fluerr_pname_to_fit)
+=======
+        the_ax.set_xlabel(self.fluerr_pname[0])
+>>>>>>> master
         the_ax.set_ylabel('Chi-square')
         # check if y axis is logscale
         if self.uifluerr3.logyCB.checkState()!=0:
@@ -1027,7 +1483,11 @@ class MainWindow (QMainWindow):
         self.uifluerr3.plotWidget.canvas.draw()
 
     def fluErrorSave(self):
+<<<<<<< HEAD
         print "Save function to be released..."
+=======
+        print("Save function to be released...")
+>>>>>>> master
 
     def insFluIon(self):  # add one ion in the subphase
         insrows=self.ui.flusubTW.selectionModel().selectedRows()
