@@ -12,7 +12,7 @@ setuptools.setup(
     description="A software that analyzes xfntr data",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/pypa/sampleproject",
+    url="https://github.com/zhul9311/XFNTR.git",
     packages=setuptools.find_packages(),
     package_dir = {'':'.'},
     package_data = {'':['xr_ref.cpython-37m-darwin.so','GUI/*']},
@@ -22,6 +22,13 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6',
+    install_requires = [
+        'pyqt5',
+        'scipy',
+        'matplotlib',
+        'lmfit',
+        'periodictable'
+    ],
     entry_points = { # create scripts and add to sys.PATH
         'console_scripts':[
             'xfntr1 = xfntr.main:main'

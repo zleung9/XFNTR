@@ -1,6 +1,6 @@
 # Developter log
 ## 1. Add command script: xfntr
-Use "entry_points" keyword in setup() to add command "xfntr" in ocmmand lien. There might be path problems.
+Use "entry_points" keyword in setup() to add command "xfntr" in ocmmand line. There might be path problems.
 
 ```
 entry_points = { # create scripts and add to sys.PATH
