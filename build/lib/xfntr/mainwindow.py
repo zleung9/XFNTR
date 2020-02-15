@@ -2,7 +2,7 @@ import sys
 import os
 # Use absolute path instead of relative path ('./') to avoid trouble when installed by pip
 dir_path = os.path.dirname(os.path.realpath(__file__))
-
+UI_path = dir_path + '/GUI/'
 import time
 import multiprocessing
 
@@ -25,16 +25,6 @@ def resource_path(relative_path):
         # when not bundled by PyInstaller, normal method is used.
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
-
-
-#######################################################
-# define an exception hook to prevent the app from crashing on exception
-# reference: https://stackoverflow.com/questions/38020020/pyqt5-app-exits-on-error-where-pyqt4-app-would-not
-sys._excepthook = sys.excepthook
-def exception_hook(exctype, value, traceback):
-    print(exctype, value, traceback)
-    sys._excepthook(exctype, value, traceback)
-sys.excepthook = exception_hook
 
 
 #######################################################
@@ -63,7 +53,7 @@ k_B = 1.38065e-23  # Boltzman constant, in J/K
 import flu_routines_new as fl
 
 # Here the absolute path is used because PyInstaller needs to find it.
-(Ui_MainWindow, QMainWindow) = uic.loadUiType(resource_path(dir_path + '/GUI/mainwindow.ui'))
+(Ui_MainWindow, QMainWindow) = uic.loadUiType(resource_path(UI_path + 'mainwindow.ui'))
 
 
 class myThread(QThread):
@@ -203,8 +193,12 @@ class MainWindow (QMainWindow):
             else:
                 self.par_limits[p] = [None, None]
 
-    def updateUI(self):
-
+    def updateUI(self,index=None, fresh=True):
+        '''
+        This function also works as a slot for qcombobox signal, so the first arg/kws by default
+        is reserved for receiving signal argument, which can be either index or text.
+        '''
+        print("{}, {}".format(index,fresh))
         # set text for fitting parameters
         for p, u in self.ui_params.items():
             if p in ['curv', 'loff']:
@@ -219,22 +213,30 @@ class MainWindow (QMainWindow):
         # set beam profile
         index = self.ui.flubmpfCombo.findText(self.beam)
         self.ui.flubmpfCombo.setCurrentIndex(index)
-
         self.xaxis = self.ui.fluxaxisCB.currentText()
-        if self.xaxis == 'Qz':
-            _xrange = '0.005:0.016'
-            _sh_offset = 'Det offset'
-            self.ui.fluloffCB.setCheckable(True)
-            self.ui.fluloffCB.setText('L2 offset')
-        elif self.xaxis == 'Sh':
-            _xrange = '-0.018:0.030'
-            _sh_offset = 'Sh offset'
-            self.ui.fluloffCB.setCheckable(False)
-            self.ui.fluloffCB.setText('')
-            self.ui.fluloffLE.setText(format(0,'.1f'))
-        self.ui.flusimuqzrgLE.setText(_xrange)
-        self.ui.flufitranLE.setText(_xrange)
-        self.ui.flusoffCB.setText(_sh_offset)
+
+        if fresh == True:
+            if self.xaxis == 'Qz':
+                _xrange = '0.005:0.016'
+                self.ui.fluloffCB.setCheckable(True)
+                self.ui.fluloffCB.setText('L2 offset')
+                self.ui.fluloffqzlabel.setText('mm')
+            elif self.xaxis == 'Sh':
+                _xrange = '-0.1:0.1'
+                self.ui.fluloffCB.setText('Qz')
+                self.ui.fluloffLE.setText(format(0.006, '.4f'))
+                self.ui.fluloffqzlabel.setText(self.ui.fluqofflabel.text())
+            self.ui.fluSimuRangeLE.setText(_xrange)
+            self.ui.fluFitRangeLE.setText(_xrange)
+        else:
+            try:
+                _simu_range = ':'.join(str(self.flu_simu_range)[1:-1].split(','))
+                _fit_range = ':'.join(str(self.flu_fit_range)[1:-1].split(','))
+                self.ui.fluSimuRangeLE.setText(_simu_range)
+                self.ui.fluFitRangeLE.setText(_fit_range)
+                self.ui.fluloffLE.setText(str(self.qz[0]))
+            except Exception as e:
+                self.updateUI(fresh=True)
 
         self.updatePar()
 
@@ -250,35 +252,39 @@ class MainWindow (QMainWindow):
 
         # fitting parameters for fluorescence
         self.flu_par = lm.Parameters()
-        for name,par in self.ui_params.items():
-            self.flu_par.add(name, value=float(par[0].text()), vary=par[1].isChecked(),
-                                   min=self.par_limits[name][0], max=self.par_limits[name][1],
-                                   expr=None, brute_step=None)
-
-        # fitting (if any) parameters for reflectivity
-        self.ref_par = lm.Parameters()
-            # add tuples:       (NAME       VALUE   VARY MIN  MAX  EXPR BRUTE_STEP)
-        self.ref_par.add_many( ('rho_t', self.sys_par['rho_top'], 0, None, None, None, None),
-                               ('rho_b', self.sys_par['rho_bot'], 0, None, None, None, None),
-                               ('mu_t', self.sys_par['mu_top_inc'], 0, None, None, None, None),
-                               ('mu_b', self.sys_par['mu_bot_inc'], 0, None, None, None, None),
-                               ('sigma0', 3.0, 0, None, None, None, None),
-                               ('q_off', 0, 0, None, None, None, None ))
-        # info of element in the system
-        self.flu_elements = [['Eu', 1, 0.947]]  # name, composition, Ionic Radius(A)
+        try:
+            for name,par in self.ui_params.items():
+                self.flu_par.add(name, value=float(par[0].text()), vary=par[1].isChecked(),
+                                       min=self.par_limits[name][0], max=self.par_limits[name][1],
+                                       expr=None, brute_step=None)
+        except ValueError as VE:
+            print("ValueError: ", VE)
+        else:
+            # fitting (if any) parameters for reflectivity
+            self.ref_par = lm.Parameters()
+                # add tuples:       (NAME       VALUE   VARY MIN  MAX  EXPR BRUTE_STEP)
+            self.ref_par.add_many( ('rho_t', self.sys_par['rho_top'], 0, None, None, None, None),
+                                   ('rho_b', self.sys_par['rho_bot'], 0, None, None, None, None),
+                                   ('mu_t', self.sys_par['mu_top_inc'], 0, None, None, None, None),
+                                   ('mu_b', self.sys_par['mu_bot_inc'], 0, None, None, None, None),
+                                   ('sigma0', 3.0, 0, None, None, None, None),
+                                   ('q_off', 0, 0, None, None, None, None ))
+            # info of element in the system
+            self.flu_elements = [['Eu', 1, 0.947]]  # name, composition, Ionic Radius(A)
 
         # update the list of sh and qz
         try:
-            self.simu_range = [float(i) for i in str(self.ui.flusimuqzrgLE.text()).split(':')]
+            self.flu_simu_range = [float(i) for i in str(self.ui.fluSimuRangeLE.text()).split(':')]
+            self.flu_fit_range = [float(i) for i in str(self.ui.fluFitRangeLE.text()).split(':')]
         except:
             print("Error: Check if the range is right.")
         self.xaxis = self.ui.fluxaxisCB.currentText()
         if self.xaxis == 'Qz':
             self.sh = np.array([0])
-            self.qz = np.linspace(self.simu_range[0], self.simu_range[1], 200)
+            self.qz = np.linspace(self.flu_simu_range[0], self.flu_simu_range[1], 200)
         elif self.xaxis == 'Sh':
-            self.qz = np.array([0])
-            self.sh = np.linspace(self.simu_range[0], self.simu_range[1], 200)
+            self.qz = np.array([float(self.ui.fluloffLE.text())])
+            self.sh = np.linspace(self.flu_simu_range[0], self.flu_simu_range[1], 200)
 
         # update parameters for flurescence calculation
         self.flucal_par = fl.update_flu_parameters(self.flucal_par,
@@ -312,7 +318,7 @@ class MainWindow (QMainWindow):
 
     def setupLimitsUI(self):
 
-        ui = uic.loadUi('GUI/err4.ui', QDialog(self))
+        ui = uic.loadUi(UI_path + 'err4.ui', QDialog(self))
         ui.cancelPB.clicked.connect(ui.close)
         ui.confirmPB.clicked.connect(self.updateLimits)
         self.ui_par_limits = OrderedDict(
@@ -356,7 +362,7 @@ class MainWindow (QMainWindow):
         self.directory = str(QFileInfo(self.flufiles[0]).absolutePath())
         self.updateFluFile()
 
-    def updateFluFile(self): #update flu files in the listwidget
+    def updateFluFile(self): # update flu files in the listwidget
         self.ui.flufileLW.clear()
         for i, f in enumerate(self.flufiles):
             try:
@@ -370,9 +376,18 @@ class MainWindow (QMainWindow):
         self.selectedflufiles_rows = [self.ui.flufileLW.row(item) for item in selectedflufiles]
         self.selectedflufiles_rows.sort()
         if len(selectedflufiles) != 0:
-            for i, r in enumerate(self.selectedflufiles_rows):
-                data = np.loadtxt(str(self.flufiles[r]),comments='#')
-                self.fludata.append(data)
+            try:
+                for i, r in enumerate(self.selectedflufiles_rows):
+                    data = np.loadtxt(str(self.flufiles[r]),comments='#')
+                    for d in data: # replace zero error bar with 10% error
+                        if d[2]==0:
+                            print('Error bar replaced with 10% of value for entry {}'.format(d))
+                            d[2] = float(d[1]) / 10
+                    print('\n')
+
+                    self.fludata.append(data)
+            except OSError as e:
+                print(e)
         self.updateFluPlot()
 
     def removeFluFile(self): #remove flu files in the listwidget and deselect all flu files in the listwidget
@@ -384,15 +399,19 @@ class MainWindow (QMainWindow):
         self.updateFluFile()
 
     def addFluFitFile(self): #add flu fit files into the listwidget and deselect flu fit files in the listwidget
-        f, _ = QFileDialog.getOpenFileNames(
-            caption = 'Select Multiple Fluorescence Fit Files to import',
-            directory = self.directory,
-            filter = 'FIT Files (*.fit*; *_fit.txt)'
-        )
-        self.flufitfiles = self.flufitfiles + f
-        self.directory = str(QFileInfo(self.flufitfiles[0]).absolutePath())
-        self.updateFluFitFile()
-
+        try:
+            f, _ = QFileDialog.getOpenFileNames(
+                caption = 'Select Multiple Fluorescence Fit Files to import',
+                directory = self.directory,
+                filter = 'FIT Files (*.fit*; *_fit.txt)'
+            )
+            self.flufitfiles = self.flufitfiles + f
+            self.directory = str(QFileInfo(self.flufitfiles[0]).absolutePath())
+            self.updateFluFitFile()
+        except IndexError as IE:
+            pass # ignore IndexError
+        except:
+            print("Something went wrong when reading fit files!")
     def updateFluFitFile(self): #update flu fit files in the listwidget
         self.ui.flufitfileLW.clear()
         for i, f in enumerate(self.flufitfiles):
@@ -408,10 +427,13 @@ class MainWindow (QMainWindow):
         selectedflufitfiles = self.ui.flufitfileLW.selectedItems()
         self.selectedflufitfiles_rows = [self.ui.flufitfileLW.row(item) for item in selectedflufitfiles]
         self.selectedflufitfiles_rows.sort()
-        if len(selectedflufitfiles) != 0:
-            for i, r in enumerate(self.selectedflufitfiles_rows):
-                data = np.loadtxt(str(self.flufitfiles[r]),comments='#')
-                self.flufitdata.append(data)
+        try:
+            if len(selectedflufitfiles) != 0:
+                for i, r in enumerate(self.selectedflufitfiles_rows):
+                    data = np.loadtxt(str(self.flufitfiles[r]),comments='#')
+                    self.flufitdata.append(data)
+        except OSError as OE:
+            print(OE)
         self.updateFluPlot()
 
     def removeFluFitFile(self):  #remove flu fit files in the listwidget and deselect all flu fit files in the listwidget
@@ -442,19 +464,8 @@ class MainWindow (QMainWindow):
             for i, d in enumerate(self.flufitdata):
                 ax1.plot(d[:, 0], d[:, 1],marker='', ls='-', label=' fit #'+str(i + 1))
 
-        self.xaxis = self.ui.fluxaxisCB.currentText()
-        if self.xaxis == 'Qz':
-            x_range = [0.004, 0.017]
-            x_label = r'$Q_z$' + ' ' + r'$[\AA^{-1}]$'
-            if self.ui.fluqcCB.isChecked():
-                ax1.axvline(self.qc, color='black', alpha=0.5)
-        elif self.xaxis == 'Sh':
-            x_range = [-0.020, 0.040]
-            x_label = r'$\Delta sh$' + ' ' + r'$[mm]$'
-        ax1.set_xlabel(x_label)
-        ax1.set_ylabel(r'$Intensity [a.u.]$')
-        ax1.set_xlim(x_range)
 
+        self.xaxis = self.ui.fluxaxisCB.currentText()
         if self.ui.flushowCB.isChecked():
             if self.flu is 0:
                 print('Please print simulate button first!!')
@@ -463,16 +474,27 @@ class MainWindow (QMainWindow):
                 if self.xaxis == 'Qz':
                     x = self.qz
                     y = self.flu[0, :, 2:]
+                    x_range = [x[0]-0.001, x[-1]+0.001]
+                    x_label = r'$Q_z$' + ' ' + r'$[\AA^{-1}]$'
+                    if self.ui.fluqcCB.isChecked():
+                        ax1.axvline(self.qc, color='black', alpha=0.5)
                 elif self.xaxis == 'Sh':
                     x = self.sh
                     y = self.flu[:, 0, 2:]
+                    x_range = [x[0]-0.001, x[-1]+0.001]
+                    x_label = r'$\Delta sh$' + ' ' + r'$[mm]$'
+            try:
+                ax1.set_xlabel(x_label)
+                ax1.set_ylabel(r'$Intensity [a.u.]$')
+                ax1.set_xlim(x_range)
+                ax1.plot(x, y[:,0], ls='-', label='total', color='r')
+                if self.ui.flucompCB.isChecked():
+                    ax1.plot(x, y[:,1], ls='-', label='water',color='b', alpha=0.5)
+                    ax1.plot(x, y[:,2], ls='-', label='interface',color='purple', alpha=0.5)
+                    ax1.plot(x, y[:,3], ls='-', label='oil', color='g', alpha=0.5)
 
-            ax1.plot(x, y[:,0], ls='-', label='total', color='r')
-            if self.ui.flucompCB.isChecked():
-                ax1.plot(x, y[:,1], ls='-', label='water',color='b', alpha=0.5)
-                ax1.plot(x, y[:,2], ls='-', label='interface',color='purple', alpha=0.5)
-                ax1.plot(x, y[:,3], ls='-', label='oil', color='g', alpha=0.5)
-
+            except ValueError as VE:
+                print(VE)
         if self.ui.flulegendCB.isChecked():
             ax1.legend(loc = str(self.ui.flulegendlocCoB.currentText()),
                        frameon=False,
@@ -495,7 +517,7 @@ class MainWindow (QMainWindow):
             row_fit=len(self.selectedflufitfiles_rows)
             row=row_flu+row_fit
             Dialog=QDialog(self)
-            self.uiplotscale=uic.loadUi('plotscale.ui', Dialog)
+            self.uiplotscale=uic.loadUi(UI_path + 'plotscale.ui', Dialog)
             self.uiplotscale.scaleTW.setRowCount(row) #set the table size; 4 column is fixed
             self.uiplotscale.show()
             self.uiplotscale.scaleLabel.setText('Fluorescence Plot Scale Setup: X=X*Factor+Offset')
@@ -542,18 +564,16 @@ class MainWindow (QMainWindow):
     def fitFlu(self, uncertainty_calculation=False):
 
         selectedflufiles = self.ui.flufileLW.selectedItems()
-        if len(selectedflufiles) != 1:
+        try:
+            assert len(selectedflufiles) == 1
+        except:
             print("Error: please select one data to fit.")
-            raise Exception
+            return
         data = self.fludata[0]
 
-        try:
-            self.fit_range = [float(i) for i in str(self.ui.flufitranLE.text()).split(':')]
-        except:
-            print("Error: Check if the range is right.")
         self.updatePar()
 
-        self.data_to_fit = data[(data[:,0] >= self.fit_range[0]) * (data[:, 0] <= self.fit_range[1])]
+        self.data_to_fit = data[(data[:,0] >= self.flu_fit_range[0]) * (data[:, 0] <= self.flu_fit_range[1])]
 
         if self.xaxis == 'Qz':
             self.qz = self.data_to_fit[:,0]
@@ -575,7 +595,7 @@ class MainWindow (QMainWindow):
         tb.clear()
         tb.append(lm.fit_report(self.flu_result))
 
-        self.updateUI()  # it has to be before updateFluCal()
+        self.updateUI(fresh=False)  # it has to be before updateFluCal()
         self.updateFluCal() # self.updateUI() has to be excucated before it reads parameters from GUI
 
     def saveFlu(self):
@@ -589,8 +609,8 @@ class MainWindow (QMainWindow):
         self.updatePar()
 
         self.saveFileName = QFileDialog.getSaveFileName(caption='Save Fluorescence Fitting Parameters',
-                                                            directory=self.directory,
-                                                            filter='Par Files (*.par*;*_par.txt)')
+                                                        directory=self.directory,
+                                                        filter='Par Files (*.par*;*_par.txt)')
         with open(self.saveFileName[0] + '_par.txt','w') as fid:
             try:
                 try:
@@ -650,17 +670,17 @@ class MainWindow (QMainWindow):
             line_num += 1
 
         # update parameter with new ui values
-        self.updateUI()
+        self.updateUI(fresh=False)
         self.updateFluCal()
 
     def saveFluFitDig(self):
 
         Dialog=QDialog(self)
-        self.uiflusavefit = uic.loadUi(resource_path('GUI/refsave.ui'), Dialog)
+        self.uiflusavefit = uic.loadUi(resource_path(UI_path+'refsave.ui'), Dialog)
         self.uiflusavefit.label.setText('Save Fluorescence Fit/Calcualtion!')
         try:
-            self.uiflusavefit.xminLE.setText(str(self.simu_range[0]))
-            self.uiflusavefit.xmaxLE.setText(str(self.simu_range[1]))
+            self.uiflusavefit.xminLE.setText(str(self.flu_simu_range[0]))
+            self.uiflusavefit.xmaxLE.setText(str(self.flu_simu_range[1]))
         except:
             pass
         self.uiflusavefit.numpointLE.setText(str(200))
@@ -681,27 +701,32 @@ class MainWindow (QMainWindow):
             self.flunp = float(self.uiflusavefit.numpointLE.text())
             self.fluxmin = float(self.uiflusavefit.xminLE.text())
             self.fluxmax = float(self.uiflusavefit.xmaxLE.text())
+            assert (self.fluxmin < self.fluxmax), "Maximum smaller than Minimum"
 
-            self.saveFileName = str(QFileDialog.getSaveFileName(caption='Save Fluorescence Fit Data',
-                                                                directory=self.directory))
-            fname = self.saveFileName+'_fit.txt'
-
+            self.saveFileName = QFileDialog.getSaveFileName(caption='Save Fluorescence Fit Data',
+                                                            directory=self.directory)
+            fname = self.saveFileName[0] + '_fit.txt'
             if self.xaxis == 'Qz':
                 fit_to_save = self.flu[0,:,(1,2)].transpose()
             elif self.xaxis == 'Sh':
-                fit_to_save = self.flu[:,0,(0,2)].transpose()
-
+                fit_to_save = self.flu[:,0,(0,2)]
             np.savetxt(fname, fit_to_save, fmt='%.4e\t%.4e')
+
             self.flusavefitindex=0
             self.uiflusavefit.close()
-
+        except AssertionError as AE:
+            print("Error: {0}".format(AE))
+        except IndexError as IE:
+            pass # Ignore IndexError
         except:
-            print("Error: did you set right limit smaller than left limit?")
+            print("An error happens while saving fit file!")
 
     def debugErr(self):
-        flufile = '/Users/zhuzi/work/data/201907Jul/sample5_1mMEuHDEHP_water_flu.txt'
-        parfile = '/Users/zhuzi/work/data/201907Jul/sample5_1mMEuHDEHP_water_gaussian_par.txt'
-        self.flufiles = self.flufiles + [flufile]
+        flufile = ['/Users/zhuzi/work/data/201912Dec/sh_sample03_318_50mMEu(NO3)3_s1h0.2_qz0.0015_flu.txt',
+                   '/Users/zhuzi/work/data/201912Dec/sh_sample03_320_50mMEu(NO3)3_s1h0.2_qz0.0015_flu.txt',
+                   '/Users/zhuzi/work/data/201912Dec/sh_sample03_494_50mMEu(NO3)3_s1h0.2_abs8_qz0.015_flu.txt']
+        parfile = '/Users/zhuzi/work/data/201912Dec/sh_sample03_318_50mMEu(NO3)3_s1h0.2_qz0.0015_par.txt'
+        self.flufiles = self.flufiles + flufile
         self.directory = str(QFileInfo(self.flufiles[0]).absolutePath())
         self.updateFluFile()
 
@@ -746,9 +771,9 @@ class MainWindow (QMainWindow):
             # if multiple para's r checked, uncheck all and raise error
             for name in self.fluerr_pname:
                 self.ui_params[name][1].setChecked(False)
-            raise
+            return
 
-        self.uifluerr1=uic.loadUi('GUI/err1.ui',QDialog(self))
+        self.uifluerr1=uic.loadUi(UI_path + 'err1.ui',QDialog(self))
         self.uifluerr1.label.setText('Uncertainty Calculation for Parameter:' + self.fluerr_pname[0])
 
         best_value = float(self.ui_params[self.fluerr_pname[0]][0].text())
@@ -788,7 +813,7 @@ class MainWindow (QMainWindow):
         for p, u in self.ui_params.items():  u[1].toggle()
 
         # close the first dialog and open a new dialog
-        self.uifluerr2 = uic.loadUi('GUI/err2.ui', QDialog(self))
+        self.uifluerr2 = uic.loadUi(UI_path + 'err2.ui', QDialog(self))
         self.uifluerr2.label.setText('Please check parameters to fit')
         self.uifluerr2.fluErrorProgress.setValue(0)
         # self.fluErroFit = myThread()
@@ -902,7 +927,7 @@ class MainWindow (QMainWindow):
         except:
             right_err_str = "not found"
 
-        self.uifluerr3=uic.loadUi('GUI/err3.ui',QDialog(self))
+        self.uifluerr3=uic.loadUi(UI_path + 'err3.ui',QDialog(self))
         self.uifluerr3.label.setText('Plot for Chi-square vs Parameter:'+self.fluerr_pname[0])
         self.uifluerr3.minchiLE.setText(format(min_chisq,'.2f'))
         self.uifluerr3.tarchiLE.setText(format(self.target_chisq,'.2f'))

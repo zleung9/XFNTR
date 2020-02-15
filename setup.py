@@ -15,7 +15,12 @@ setuptools.setup(
     url="https://github.com/zhul9311/XFNTR.git",
     packages=setuptools.find_packages(),
     package_dir = {'':'.'},
-    package_data = {'':['xr_ref.cpython-37m-darwin.so','GUI/*']},
+    package_data = {
+        '' : ['xr_ref.cpython-37m-darwin.so','GUI/*']
+    },
+    exclude_package_data = {
+        '' : ['.git/','.setup.py.swp']
+    },
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

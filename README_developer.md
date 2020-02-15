@@ -35,3 +35,6 @@ and used the absolute file path for GUI files:
 ```
 UI_path = dir_path + '/GUI/'
 ```
+## 3. Compatability of "xr_ref.f90".
+
+## 4. Compatability with Windows OS.
