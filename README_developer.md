@@ -37,4 +37,25 @@ UI_path = dir_path + '/GUI/'
 ```
 ## 3. Compatability of "xr_ref.f90".
 
+Add the following to allow the executtion of a script when installing. The script will handle teh xr_ref.f90 file.
+
+from distutils.command.install import install as _install
+def _post_install(dir):
+    from subprocess import call
+    call([sys.executable, 'scriptname.py'],
+         cwd=os.path.join(dir, 'packagename'))
+
+
+class install(_install):
+    def run(self):
+        _install.run(self)
+        self.execute(_post_install, (self.install_lib,),
+                     msg="Running post install task")
+
+
+setup(
+    ...
+    cmdclass={'install': install},
+)
+
 ## 4. Compatability with Windows OS.
