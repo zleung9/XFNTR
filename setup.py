@@ -1,25 +1,14 @@
 # All .ui files and .so files are added through keyword: package_data, because setuptools doesn't include them automatically.
+import sys
+import os
 from setuptools import setup, find_packages
-from setuptools.command.install import install as _install
-
-def _post_install(dir):
-    from subprocess import call
-    call([sys.executable,'post_install_cmd.py'],
-         cwd = os.path.join(dir, 'post_install_cmd'))
-
-class install(_install):
-    """Post-install for installation mode"""
-    def run(self):
-        _install.run(self)
-        self.execute(_post_install, (self.install_lib, ), 
-                     msg = "Running post install task")
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(
     name = "xfntr",
-    version = "0.2.0",
+    version = "0.2.1",
     author = "Zhu Liang",
     author_email = "zliang8@uic.edu",
     description = "A software that analyzes xfntr data",
@@ -55,7 +44,4 @@ setup(
             'xfntr = xfntr.main:main'
         ]
     },
-    cmdclass = { # something to run after install (e.g. deal with xr_ref.f90.
-        'install':install
-    }
 )

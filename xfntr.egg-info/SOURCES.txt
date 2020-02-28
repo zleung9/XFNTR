@@ -9,6 +9,7 @@ setup.py
 ./xfntr/main.py
 ./xfntr/mainwindow.py
 ./xfntr/mplwidget.py
+./xfntr/post_install_cmd.py
 ./xfntr/xr_ref.cpython-37m-darwin.so
 ./xfntr/GUI/err1.ui
 ./xfntr/GUI/err2.ui

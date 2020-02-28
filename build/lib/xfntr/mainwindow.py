@@ -467,7 +467,7 @@ class MainWindow (QMainWindow):
 
         self.xaxis = self.ui.fluxaxisCB.currentText()
         if self.ui.flushowCB.isChecked():
-            if self.flu is 0:
+            if np.all(self.flu==0):
                 print('Please print simulate button first!!')
                 return
             else:
