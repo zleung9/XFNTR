@@ -722,12 +722,7 @@ class MainWindow (QMainWindow):
             print("An error happens while saving fit file!")
 
     def debugErr(self):
-        flufile = [r'/Users/zhuzi/work/data/201912Dec/sh_sample03_318_50mMEu(NO3)3_s1h0.2_qz0.0015_flu.txt',
-                   r'/Users/zhuzi/work/data/201912Dec/sh_sample03_320_50mMEu(NO3)3_s1h0.2_qz0.0015_flu.txt',
-                   r'/Users/zhuzi/work/data/201912Dec/sh_sample03_494_50mMEu(NO3)3_s1h0.2_abs8_qz0.015_flu.txt']
-        parfile = r'/Users/zhuzi/work/data/201912Dec/sh_sample03_318_50mMEu(NO3)3_s1h0.2_qz0.0015_par.txt'
-        self.flufiles = self.flufiles + flufile
-        self.directory = str(QFileInfo(self.flufiles[0]).absolutePath())
+        parfile = os.path.join(self.directory,'xfntr/sh_sample03_318_50mMEu(NO3)3_s1h0.2_qz0.0015_par.txt')
         self.updateFluFile()
 
         with open(str(parfile)) as fid:
