@@ -2,6 +2,7 @@ import sys
 import os
 # Use absolute path instead of relative path ('./') to avoid trouble when installed by pip
 dir_path = os.path.dirname(os.path.realpath(__file__))
+print(dir_path)
 UI_path = dir_path + '/GUI/'
 import time
 import multiprocessing
@@ -722,7 +723,8 @@ class MainWindow (QMainWindow):
             print("An error happens while saving fit file!")
 
     def debugErr(self):
-        parfile = os.path.join(self.directory,'xfntr/sh_sample03_318_50mMEu(NO3)3_s1h0.2_qz0.0015_par.txt')
+        parfile = os.path.join(dir_path,
+                               'sh_sample03_318_50mMEu(NO3)3_s1h0.2_qz0.0015_par.txt')
         self.updateFluFile()
 
         with open(str(parfile)) as fid:
