@@ -257,7 +257,6 @@ def fluCalFun_core(a0,sh,p):
         flu[0] = flu[3]  # total intensity only contains oil phase
         return flu
 
-    breakpoint()
     ref = mfit.refCalFun([], [p['tRho'], p['bRho']], [p['itMu'], p['ibMu']], [3.0], 2 * p['k0'] * a_new)
     p_depth, trans = penetrate((p['itBt'],p['ibBt']), (p['itDt'],p['ibDt']), a_new, p['k0'])
     p_depth_eff = 1 / (p['ebMu'] + a_new/a0 / p_depth)
