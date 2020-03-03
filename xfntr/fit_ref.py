@@ -1,4 +1,3 @@
-import xr_ref as xr
 import sys
 import math as m
 import numpy as np
