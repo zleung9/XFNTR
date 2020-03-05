@@ -71,7 +71,7 @@ def update_flu_parameters(p, *args):
     elif beam_profile == 'Gaussian':
         stdev = width / 2.355  # FWHM of the beam, i.e. 2.355 sigma
         beam_size = 2 * (3 * stdev)  # keep the beam up to +/-3 standard deviation, or 99.73% of intensity.
-        rays = np.linspace(-beam_size / 2, beam_size / 2, steps + 1)  # devide the beam into 500 rays
+        rays = np.linspace(-beam_size/2, beam_size/2, steps+1)  # devide the beam into 500 rays
         weights = stat.norm(0, stdev).pdf(rays) * width  # weight normalized to the total intensity
     else:
         print("Error: please choose the right beam profile: uniform/gaussian")

@@ -35,6 +35,7 @@ setup(
         'matplotlib',
         'lmfit',
         'periodictable'
+        'numba'
     ],
     entry_points = { # create scripts and add to sys.PATH
         'console_scripts':[

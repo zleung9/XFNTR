@@ -1,0 +1,25 @@
+Chi_Square	1.693
+Fitting_Parameters
+losc		3.510e-10
+hisc		5.530e-10
+lobk		0.000e+00
+upbk		1.000e-03
+surd		8.740e-03
+bg		8.000e-04
+qoff		0.000e+00
+curv		1.801e+02
+loff		6.000e+00
+soff		-9.370e-04
+
+System_Parameters
+Beam_Profile		Gaussian
+E_inc		20.0000
+E_emt		5.8420
+mu_top_inc		0.2730
+mu_top_emt		7.4510
+mu_bot_inc		0.7018
+mu_bot_emt		26.5800
+rho_top		0.2591
+rho_bot		0.3330
+width		0.0150
+det_len		12.7000
