@@ -610,8 +610,7 @@ class MainWindow (QMainWindow):
         self.updatePar()
 
         self.saveFileName = QFileDialog.getSaveFileName(caption='Save Fluorescence Fitting Parameters',
-                                                        directory=self.directory,
-                                                        filter='Par Files (*.par*;*_par.txt)')
+                                                        directory=self.directory)
         with open(self.saveFileName[0] + '_par.txt','w') as fid:
             try:
                 try:
