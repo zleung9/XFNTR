@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name = "xfntr",
-    version = "0.2.2",
+    version = "0.2.5",
     author = "Zhu Liang",
     author_email = "zliang8@uic.edu",
     description = "A software that analyzes xfntr data",
@@ -18,7 +18,10 @@ setup(
     packages = find_packages(),
     package_dir = {'':'.'},
     package_data = {
-        '' : ['xr_ref.cpython-37m-darwin.so','GUI/*']
+        '' : ['xr_ref.cpython-37m-darwin.so',
+              'GUI/*',
+              'images/*',
+              'test/*']
     },
     exclude_package_data = {
         '' : ['.git/','.setup.py.swp']
@@ -34,7 +37,7 @@ setup(
         'scipy',
         'matplotlib',
         'lmfit',
-        'periodictable'
+        'periodictable',
         'numba'
     ],
     entry_points = { # create scripts and add to sys.PATH

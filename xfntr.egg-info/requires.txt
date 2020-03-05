@@ -3,3 +3,4 @@ scipy
 matplotlib
 lmfit
 periodictable
+numba
