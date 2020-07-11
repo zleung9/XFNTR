@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name = "xfntr",
-    version = "0.2.6",
+    version = "0.2.7",
     author = "Zhu Liang",
     author_email = "zliang8@uic.edu",
     description = "A software that analyzes xfntr data",
