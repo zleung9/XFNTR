@@ -236,7 +236,7 @@ class MainWindow (QMainWindow):
                 _fit_range = ':'.join(str(self.flu_fit_range)[1:-1].split(','))
                 self.ui.fluSimuRangeLE.setText(_simu_range)
                 self.ui.fluFitRangeLE.setText(_fit_range)
-                self.ui.fluloffLE.setText(str(self.qz[0]))
+#               self.ui.fluloffLE.setText(str(self.qz[0]))
             except Exception as e:
                 self.updateUI(fresh=True)
 
