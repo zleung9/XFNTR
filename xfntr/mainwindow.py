@@ -557,7 +557,7 @@ class MainWindow (QMainWindow):
         if not self.ui.flushowCB.isChecked():
             return # if show is not checked, do nothing.
         if self.xaxis == 'Qz':
-            self.qc = np.sqrt(2*(p['ibDt']-p['itDt'])) * 2 * p['k0']
+            self.qc = np.sqrt(2*(p['ibDt']-p['itDt'])) * 2 * p['k0'] - p['qoff']
         self.flu = fl.flu2min(self.flu_par, (self.sh, self.qz), p)
 
         self.updateFluPlot()

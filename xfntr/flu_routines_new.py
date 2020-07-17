@@ -1,13 +1,6 @@
 from collections import OrderedDict
 import periodictable as pdtb
 import lmfit as lm
-import multiprocessing
-
-r_e = pdtb.constants.electron_radius * 1e10  # classical electron radius, in A
-N_A = pdtb.constants.avogadro_number  # Avogadro number, unitless
-k_B = 1.38065e-23  # Boltzman constant, in J/K
-p_igMu = (1/1.717)*1e-7    # absorption coefficient of 20keV beam by glass
-p_thick = 3.5 * 1e7     # thickness of glass tray in A
 
 # define an function that will be used in the program a lot.
 absorb = lambda x: np.nan_to_num(np.exp(x))
@@ -17,7 +10,40 @@ import scipy.stats as stat
 import fit_ref as mfit
 import flu_geometry_routines as gm
 
+r_e = pdtb.constants.electron_radius * 1e10  # classical electron radius, in A
+N_A = pdtb.constants.avogadro_number  # Avogadro number, unitless
+k_B = 1.38065e-23  # Boltzman constant, in J/K
+p_igMu = (1/1.717)*1e-7    # absorption coefficient of 20keV beam by glass
+p_thick = 3.5 * 1e7     # thickness of glass tray in A
+PI = np.pi
 
+def fresnel(a0,k0,beta,delta):
+    '''
+    Calculate the fresnell reflectivity and transmissivity for an ideal interface.
+    Refererence: P. Pershan and M. Schlossman(2012). Equation 3.17 and 3.18.
+
+    Input:
+    -----
+    a0: incident angle 
+    k0: wavevector
+    delta and beta: refraction index n=1-delta+j*beta; 0:top; 1:bottom
+
+    Output:
+    ------
+    R: frenel reflectivity
+    T: transmissivity
+    D: penetration depth.
+    '''
+
+    a_0 = a0
+    a_c = np.sqrt(2*(delta[1]-delta[0]))
+    a_t = np.sqrt(a_0**2-a_c**2+2j*beta[1])
+
+    R = abs((a_0-a_t)/(a_0+a_t))**2  #Equation 3.17
+    T = abs(2*a_0/(a_0+a_t))**2  #Equation 3.17
+    D = 1 / (2*k0*np.imag(a_t)) #Equation 3.16
+
+    return R,T,D
 
 def penetrate(beta, delta, alpha, k0):
     alpha[alpha == np.inf] = 0
@@ -30,6 +56,16 @@ def penetrate(beta, delta, alpha, k0):
     return 1/penetration_coeff, trans
 
 def update_flu_parameters(p, *args):
+    '''
+    Update parameter dictionary every time the bulk composisition changes.
+    p: the parameter dictionary to be updated. 
+    args: 
+        args[0]: fitting prarameters
+        arge[1]: system parameters (optional)
+        args[2]: element information (optional)
+    output:
+        p: updated parameter dictionary.
+    '''
 
     assert type(p) is OrderedDict
     # *args have to be at least fitting parameters
@@ -52,8 +88,7 @@ def update_flu_parameters(p, *args):
         print("Please check your parameter:{}".format(e))
 
     if len(args) == 1:
-        return p
-
+        return p 
     # if the *args is tuple (flu_par, sys_par, flu_elements), do the following
     try:
         sys_par = args[1]
@@ -257,8 +292,7 @@ def fluCalFun_core(a0,sh,p):
         flu[0] = flu[3]  # total intensity only contains oil phase
         return flu
 
-    ref = mfit.refCalFun([], [p['tRho'], p['bRho']], [p['itMu'], p['ibMu']], [3.0], 2 * p['k0'] * a_new)
-    p_depth, trans = penetrate((p['itBt'],p['ibBt']), (p['itDt'],p['ibDt']), a_new, p['k0'])
+    ref, trans, p_depth = fresnel(a_new,p['k0'],(p['itBt'],p['ibBt']), (p['itDt'],p['ibDt']))
     p_depth_eff = 1 / (p['ebMu'] + a_new/a0 / p_depth)
 
     ################### for region -l/2 < x < l/2  #################
@@ -329,21 +363,11 @@ def flu2min(pars, x, p, data=None, eps=None): # residuel for flu fitting
 
     return (flu[:,:,2].flatten() - data) / eps
 
-def fluErrorFitSingleCore2(i, value_list, sh, qz, pname, flu_par, flucal_par, data_to_fit):
-    flu_par[pname].value = value_list[i]  # change value of the chosen parameter
-    fluerr_result = lm.minimize(fl.flu2min, flu_par,
-                                args=((sh, qz), flucal_par),
-                                kws={'data': data_to_fit[:, 1], 'eps': data_to_fit[:, 2]})
-    return ([i, value_list[i], fluerr_result.nfree, fluerr_result.redchi])
-
-def multiCore(func, iterable):
-    pool = multiprocessing.Pool()
-    result = pool.map(func, range(len(iterable)))
-    pool.close()
-    pool.join()
-    return result
 
 if __name__ == '__main__':
-    p_depth, trans = penetrate((1.35e-10, 5.0e-10), (4.466e-7, 5.84e-7), np.array([3.14]), 1.1355)
+    p_depth, trans = penetrate((1.35e-10, 5.0e-10), (4.466e-7, 5.84e-7), np.array([3.14]), 10.1355)
     print(p_depth)
     print(trans)
+    R,T,D = fresnel(np.array([3.14e-4]),10.1355,(1.35e-10,5.0e-10),(4.466e-7, 5.84e-7))
+    print((R,T,D))
+
