@@ -3,13 +3,18 @@ A GUI software to process, analyze and visualize XFNTR data
 
 
 
-To install the software, type:
+To install the software, MAC/LInux users type:
 
 `pip install xfntr`
 
-required: Python3.7
+Windows users type:
 
-To run the software, type:
+`pip install xfntr-win`
+
+Required environment: Python3.7
+
+
+To run the software, all users type:
 
 `xfntr`
 
