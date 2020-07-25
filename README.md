@@ -8,3 +8,8 @@ To install the software, type:
 `pip install xfntr`
 
 required: Python3.7
+
+To run the software, type:
+
+`xfntr`
+
