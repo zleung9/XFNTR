@@ -6,8 +6,6 @@ dir_path_test = os.path.join(dir_path,'test')
 print(dir_path)
 UI_path = dir_path + '/GUI/'
 import time
-import multiprocessing
-
 
 ######################################################
 # This block of code is needed for properly working with PyInstaller
@@ -56,29 +54,6 @@ import flu_routines_new as fl
 
 # Here the absolute path is used because PyInstaller needs to find it.
 (Ui_MainWindow, QMainWindow) = uic.loadUiType(resource_path(UI_path + 'mainwindow.ui'))
-
-
-class myThread(QThread):
-    def __init__(self,func):
-        QThread.__init__(self)
-        self.func = func
-
-    def run(self):
-        self.func
-        
-def fluErrorFitSingleCore2(i, value_list, sh, qz, pname, flu_par, flucal_par, data_to_fit):
-        flu_par[pname].value = value_list[i]  # change value of the chosen parameter
-        fluerr_result = lm.minimize(fl.flu2min, flu_par,
-                                    args=((sh, qz), flucal_par),
-                                    kws={'data': data_to_fit[:, 1], 'eps': data_to_fit[:, 2]})
-        return ([i, value_list[i], fluerr_result.nfree, fluerr_result.redchi])
-
-def multiCore(func, iterable):
-    pool = multiprocessing.Pool()
-    result = pool.map(func, range(len(iterable)))
-    pool.close()
-    pool.join()
-    return result
 
 
 class MainWindow (QMainWindow):
@@ -250,7 +225,8 @@ class MainWindow (QMainWindow):
         for p, u in self.ui_syspar.items():
             self.sys_par[p] = float(u.text())
         self.sys_par['beam'] = self.ui.flubmpfCombo.currentText()
-        self.sys_par['span'] = 75.6 # the length of sample cell, in mm.
+        # self.sys_par['span'] = 75.6 # the length of sample cell, in mm.
+        self.sys_par['span'] = 90  # the length of trough
 
         # fitting parameters for fluorescence
         self.flu_par = lm.Parameters()
@@ -272,7 +248,8 @@ class MainWindow (QMainWindow):
                                    ('sigma0', 3.0, 0, None, None, None, None),
                                    ('q_off', 0, 0, None, None, None, None ))
             # info of element in the system
-            self.flu_elements = [['Eu', 1, 0.947]]  # name, composition, Ionic Radius(A)
+            # self.flu_elements = [['Eu', 1, 0.947]]  # name, composition, Ionic Radius(A)
+            self.flu_elements = [['Nd',1,1.08],['Cl',3,1.80]]
 
         # update the list of sh and qz
         try:
@@ -821,14 +798,6 @@ class MainWindow (QMainWindow):
 
         self.uifluerr2.show()
 
-    def fluErrorFitSingleCore(self, q, i, flu_par,flucal_par,data_to_fit):
-        fluerr_result = lm.minimize(fl.flu2min, flu_par,
-                                    args=((self.sh, self.qz), flucal_par),
-                                    kws={'data': data_to_fit[:, 1], 'eps': data_to_fit[:, 2]})
-        q.put([i, fluerr_result.nfree, fluerr_result.redchi])
-
-
-
     def fluErrorFit(self):
         self.uifluerr2.label.setText('Calculating the uncertainty for ' + self.fluerr_pname[0])
         self.uifluerr2.nextPB.setEnabled(False) # unable the next push button
@@ -841,61 +810,24 @@ class MainWindow (QMainWindow):
         fluerr_cal_par = self.flucal_par
         fluerr_par[fluerr_pname].vary = False # make sure the chosen parameter does not vary
 
+        self.fitFlu(uncertainty_calculation=True)
+
         # time the calculation
         start_time = time.time()
-        # self.ErrorFit = myThread(self.fitFlu,errorbar=True,args={})
 
-
-
-        # self.fitFlu(uncertainty_calculation=True)
-        # fluErrorFitSingleCore_i = partial(fluErrorFitSingleCore2,
-        #                                   value_list = self.fluerr_fit_range,
-        #                                   sh = self.sh,
-        #                                   qz = self.qz,
-        #                                   pname = fluerr_pname,
-        #                                   flu_par = fluerr_par,
-        #                                   flucal_par = fluerr_cal_par,
-        #                                   data_to_fit = self.data_to_fit)
-        #
-        #
-        # results = multiCore(fluErrorFitSingleCore_i, range(len(self.fluerr_fit_range)))
-        # for pp in results: print(pp)
-        # print("Uncertainty calculation takes:", time.time() - start_time, "seconds")
-        # for result in results:
-        #     self.fluerr_chisq_list[result[0]] = result[3]
-        # self.fluerr_nfree = results[-1][2]
-        # print(self.fluerr_chisq_list)
-
-
-        self.fitFlu(uncertainty_calculation=True)
-        processes = []  # create a pool for processes
-        q = multiprocessing.Queue()
+        # fit data and calculate chisq at each grid point
         for i,value in enumerate(self.fluerr_fit_range):
-            fluerr_par[fluerr_pname].value = value # change value of the chosen parameter
-            p = multiprocessing.Process(target=self.fluErrorFitSingleCore,
-                                        args=(q, i, fluerr_par,fluerr_cal_par,self.data_to_fit))
-            processes.append(p)
-            p.start()
-        for process in processes:
-            process.join()
-        results = [q.get(True) for process in processes]
+            fluerr_par[fluerr_pname].value = value
+            fluresult = lm.minimize(fl.flu2min, fluerr_par,
+                                          args=((self.sh, self.qz), fluerr_cal_par),
+                                          kws={'data':self.data_to_fit[:,1], 'eps':self.data_to_fit[:,2]}
+                                          )
+            self.fluerr_chisq_list[i] = fluresult.redchi
+            # update progress
+        self.fluerr_nfree = fluresult.nfree 
 
-        for pp in results: print(pp)
-        print("Uncertainty calculation takes:", time.time()-start_time, "seconds")
-        for result in results:
-            self.fluerr_chisq_list[result[0]] = result[2]
-        self.fluerr_nfree = results[-1][1]
         print(self.fluerr_chisq_list)
-
-        # # fit data and calculate chisq at each grid point
-        # for i,para_value in enumerate(self.fluerr_fit_range):
-        #     self.fluerr_parameters[self.fluerr_pname_to_fit].value = para_value
-        #     fluresult=lm.minimize(self.flu2min, self.fluerr_parameters, args=(x,y,yerr))
-        #     self.fluerr_chisq_list[i] = fluresult.redchi
-        #     # update progress
-        #
-        # self.progressDialog.hide()
-
+        print("Uncertainty calculation takes:", time.time()-start_time, "seconds")
         self.uifluerr2.close()
         self.fluErrorResult()
 
@@ -903,8 +835,8 @@ class MainWindow (QMainWindow):
         # calculate the left/right error for the parameter
         funChisqFactor=interp1d(self.errorlist[:,0],self.errorlist[:,1],kind='cubic')
         chisq_factor = funChisqFactor(self.fluerr_nfree) # chisq_factor corresponding to degree of freedom
-        idx_min_chisq = np.argmin(self.fluerr_chisq_list[1:]) + 1
-        min_chisq = np.min(self.fluerr_chisq_list[1:])
+        idx_min_chisq = np.argmin(self.fluerr_chisq_list) + 1
+        min_chisq = np.min(self.fluerr_chisq_list)
         self.target_chisq = min_chisq * chisq_factor
         try: # interpolate function of left values against various chisq's
             funChisqListLeft = interp1d(self.fluerr_chisq_list[1:idx_min_chisq+1],

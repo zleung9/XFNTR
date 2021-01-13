@@ -6,6 +6,7 @@ import lmfit as lm
 absorb = lambda x: np.nan_to_num(np.exp(x))
 
 import numpy as np
+from matplotlib import pyplot as plt
 import scipy.stats as stat
 import fit_ref as mfit
 import flu_geometry_routines as gm
@@ -252,7 +253,7 @@ def fluCalFun_core(a0,sh,p):
        p['bmsz']: the size of the beam for footprint calculation, in A.
        '''
 
-    z_depth = -50  # the predifined depth of interfacial ions
+    z_depth = 20  # the predifined depth of interfacial ions
 
     steps = len(p['wt']) - 1
     fprint = p['bmsz'] / np.sin(a0) # foortprint of the beam on the interface.
@@ -290,6 +291,7 @@ def fluCalFun_core(a0,sh,p):
     z_ref_l = -(x_ref + p['detR'] / 2) * a1  # reflection with left det. boundary: x=-l/2
     z_ref_r = -(x_ref - p['detR'] / 2) * a1  # reflection with right det. boundary: x=l/2
 
+    breakpoint()
     # define the initial intensity to be just background value
     flu = np.array([p['bg']] * 6)
     # two regions: region3: [-h/2a0,-l/2] & region 2: [-l/2,l/2]
@@ -321,15 +323,10 @@ def fluCalFun_core(a0,sh,p):
     p_depth_eff = 1 / (p['ebMu'] + a_new/a0 / p_depth)
 
     ################### for region -l/2 < x < l/2  #################
-    # original: uniform bulk distribution down to negative infinity.
-    lower_bulk2 = x_region[1] * wt_s * absorb(-x_s * p['itMu'] - z_s / p_depth) * trans * p_depth * \
+    lower_bulk2 = x_region[1] * wt_s * absorb(-x_s * p['itMu'] - z_s*a1/a0 / p_depth) * trans * p_depth_eff * \
                   (absorb(z_s / p_depth_eff) - absorb(z_inc_r / p_depth_eff))
-    # consider uniform bulk distribution down to 5nm below interface
-    # lower_bulk2 = x_region[1] * wt_s * absorb(-x_s * p['itMu'] - z_s*a1/a0 / p_depth) * trans * p_depth_eff * \
-    #              (absorb(z_s / p_depth_eff) - absorb(z_depth / p_depth_eff))
     # consider the interfacial region as z_depth below the interface (z_depth=0 for original model)
-    # interface = x_region[1] * wt_s * trans * absorb(-p['itMu'] * x_s) * absorb(-a1/a0*z_depth/p_depth) 
-    interface = x_region[1] * wt_s * trans * absorb(-p['itMu'] * x_s)
+    interface = x_region[1] * wt_s * trans * absorb(-a1/a0*z_depth/p_depth) * absorb(-p['itMu'] * x_s)
     upper_bulk2_inc = x_region[1] * wt_s * \
                       (absorb(-x_inc * p['itMu']) / mu_eff_inc * (
                               absorb(z_inc_l * mu_eff_inc) - absorb(z_s * mu_eff_inc)))
@@ -348,7 +345,7 @@ def fluCalFun_core(a0,sh,p):
     if np.sum(block) > 0:
         edge = None
     # combine the two regions and integrate along x direction by performing np.sum.
-    bsum = stepsize * np.sum(lower_bulk2+lower_bulk3)
+    bsum = stepsize * np.sum(lower_bulk3 + lower_bulk2)
     ssum = stepsize * np.sum(interface)
     usum_inc = stepsize * (np.sum(upper_bulk1) + np.sum(upper_bulk2_inc))
     usum_ref = stepsize * (np.sum(upper_bulk3) + np.sum(upper_bulk2_ref))
